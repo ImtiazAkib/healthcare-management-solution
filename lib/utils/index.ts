@@ -7,6 +7,7 @@
   which the compiler erases.
 */
 export * from './class-name.utils';
+export * from './datetime.utils';
 export * from './error.utils';
 export * from './llms.utils';
 export * from './mongo.utils';
