@@ -235,7 +235,15 @@ renders with Inter on the body and Poppins at weight 600 on headings, no console
 `-64px`, and no horizontal scroll at 375px. Setting `dark` on `<html>` swaps every token and removing it
 restores them. `/does-not-exist` returns **404** with the styled page and a link home; `/robots.txt` serves
 `Disallow: /`; the page head carries `noindex, nofollow` and both `theme-color` values. cspell was confirmed
-live by three real failures it caught during the pass.
+live by three real failures it caught during the pass — it is not a rule that is merely configured.
+
+The hooks were exercised rather than assumed: `pre-commit` ran the branch check, `npm run lint` and
+`npm run format` on the real commit; a message with no Conventional Commits type was refused by `commitlint`
+with `type-empty`; and a commit from a branch named `Feature/BadName` was aborted before lint even started.
+
+**Not verified by me:** `pre-push`. There is no remote yet, so the hook has never fired — the `npm run build`
+it runs is green, but that the hook itself intercepts a push is one thing left to see the first time this is
+pushed anywhere.
 
 **Deviations from the plan, and why.**
 
@@ -266,6 +274,11 @@ live by three real failures it caught during the pass.
 - **`PROTECTED_SEGMENTS` ships empty.** It is the single source for both the route guard and the robots
   `Disallow` list, and there is nothing to protect until step 5 — but the constant exists now so neither of
   those two consumers has to invent it later.
+- **The `pre-commit` branch check reads `git symbolic-ref`, not `git rev-parse --abbrev-ref HEAD`.** The
+  reference's version aborts the very first commit in a repository with `fatal: ambiguous argument 'HEAD'` —
+  on an unborn branch there is no commit for `rev-parse` to resolve. `symbolic-ref --short -q` reads the ref
+  `HEAD` points at whether or not anything is committed there, with `rev-parse` kept as the fallback for a
+  detached HEAD. Found by hitting it, and fixed rather than worked around with `--no-verify`.
 - **Verified without screenshots.** The browser pane does not composite frames in this session, so the visual
   acceptance was done by reading computed styles, resolved custom properties, the accessibility tree and
   response codes out of the live page. That is stricter than looking at it for everything except layout
