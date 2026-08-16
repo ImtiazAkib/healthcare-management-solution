@@ -31,6 +31,8 @@
     "llms",
     "llmstxt",
     "maxlength",
+    "metacharacter",
+    "metacharacters",
     "mongodb",
     "mongoose",
     "nextjs",

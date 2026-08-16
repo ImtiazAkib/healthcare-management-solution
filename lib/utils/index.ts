@@ -9,5 +9,7 @@
 export * from './class-name.utils';
 export * from './error.utils';
 export * from './llms.utils';
+export * from './mongo.utils';
+export * from './phone.utils';
 export * from './url.utils';
 export * from './zod.utils';

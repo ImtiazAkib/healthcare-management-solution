@@ -30,7 +30,7 @@ in a working state.
 | [0](#step-0)     | Project scaffold                        | Phase 1–2      | ✅ Done        |
 | [1](#step-1)     | Foundations                             | Phase 2        | ✅ Done        |
 | [2](#step-2)     | SEO, structured data, llms.txt          | Phase 2        | ✅ Done        |
-| [3a](#step-3a)   | Data model — identity & directory       | Phase 2–3      | ⬜ Not started |
+| [3a](#step-3a)   | Data model — identity & directory       | Phase 2–3      | ✅ Done        |
 | [3b](#step-3b)   | Data model — clinical & scheduling      | Phase 2–3      | ⬜ Not started |
 | [4](#step-4)     | Authentication                          | Phase 3        | ⬜ Not started |
 | [5](#step-5)     | Dashboard shell & RBAC                  | Phase 3        | ⬜ Not started |
@@ -496,7 +496,7 @@ reading worth trusting after a server restart.
 
 <a id="step-3a"></a>
 
-### Step 3a — Data model: identity and directory
+### Step 3a — Data model: identity and directory ✅ Done
 
 **Goal.** The accounts, the people and the places — everything authentication and administration read, with
 validation and DTO mapping around it.
@@ -548,11 +548,68 @@ scripts/seed-super-admin.ts creates the one super administrator
   never resets an existing password.
 - Adds `mongoose`, `bcryptjs`, `tsx`.
 
-**Acceptance.** Verified against a real cluster with temporary records created and removed: the password is
-hashed by the hook and never stored plaintext, `select: false` keeps it out of an ordinary query, email is
-lowercased and uniquely indexed, `isApproved` defaults false and `isActive` true, `userFromEntity()` emits
-exactly the named keys with no `password` and no `_id`, and `patientSummaryFromEntity()` carries no clinical
-field. Both of the seed script's validation failure paths report the offending variable by name.
+**Acceptance.** ✅ Verified against the real Atlas cluster by `npm run verify:data-model` — **51 checks, all
+passing**, every fixture removed afterwards and the removal itself asserted.
+
+What it proves, beyond the obvious: the password is a bcrypt hash and never the plaintext; `select: false`
+keeps it out of an ordinary query; **re-saving an unrelated field does not double-hash an already-hashed
+password**; `comparePassword` refuses rather than throwing on an account that has none. A **second super
+administrator is refused by the partial unique index** while other roles are untouched. A doctor record and a
+patient record are each one-per-account, and a duplicate registration number or medical record number is
+refused. `userFromEntity` emits no `password`, `_id` or `__v`; `PatientSummaryDto` carries **no allergies, no
+conditions, no blood group, no address and no emergency contact** — each asserted separately, because that
+DTO is the one standing between a list screen and a clinical record.
+
+The schemas were exercised for the property they are easiest to get wrong: **re-parsing a schema's own output
+succeeds and changes nothing**, for both `phone` and `dateOfBirth`. A Server Action re-validates what the
+browser already parsed, and a non-idempotent transform would fail on that second pass and break every save.
+A future date of birth is refused _and_ reported on the `dateOfBirth` field; a fractional consultation fee is
+refused; blank clinical rows are dropped rather than error-reported; and a caller supplying its own
+`medicalRecordNo` has it discarded rather than honoured.
+
+`MONGODB_URI` is now genuinely required: blanking it in `.env.local` fails the build with
+`path: [ 'MONGODB_URI' ], message: 'MONGODB_URI is required'`. Both of the seed script's validation failure
+paths report the offending variable by name — missing values and malformed ones separately.
+
+**Not verified by me:** the seed script's _create_ path. Running it mints a real super administrator whose
+password only I would know, so it is one command for you to run:
+
+```bash
+SEED_SUPER_ADMIN_NAME="Hospital Director" SEED_SUPER_ADMIN_EMAIL="director@hospital.example" SEED_SUPER_ADMIN_PASSWORD="…" npm run seed:super-admin
+```
+
+**Deviations from the plan, and why.**
+
+- **`User.password` is optional.** Reception registers a patient at the counter before that person has an
+  account they can open — the record exists, staff can book against it, and the patient claims it later by
+  proving the address in [step 15](#step-15). That is the normal case in a hospital, not an edge case, so the
+  field is optional and `comparePassword` returns false rather than letting `bcrypt.compare` throw on
+  `undefined`.
+- **`isEmailVerified`, not the reference's `emailVerified`.** It sits beside `isApproved` and `isActive` and
+  reads as one set.
+- **`constants/directory.const.ts` was added**, holding the department and doctor field limits. The plan
+  itemized `roles`, `users` and `patient`; the directory entities needed the same treatment and putting their
+  bounds in `users.const.ts` would have made that file about three things.
+- **`lib/utils/phone.utils.ts` was added.** `userFields.phone` needs a normalizer, and the idempotence that
+  normalizer guarantees is what the whole re-parse story rests on.
+- **`state-change.schema.ts` collects the flag-flippers** — approve, activate, delete, department activate,
+  doctor accepting — rather than one file each. They are all `{ id, boolean }`, and five files agreeing on
+  one shape is five places for it to stop agreeing.
+- **Only the user schemas carry encoded error codes.** Department, doctor and patient use plain messages,
+  which decode to code 0 and still render. Their codes arrive with the services that raise them, in steps 6b
+  and 7 — inventing a taxonomy for a service that does not exist is how a registry fills with codes nothing
+  emits.
+- **`scripts/verify-data-model.ts` is one script for all four models**, not four. They are created and
+  verified together and the cleanup is shared; splitting them would mean four connections and four cleanups.
+  Wired as `npm run verify:data-model`.
+- **The verify script tags every fixture with a run-scoped suffix** and deletes by that tag. It is pointed at
+  a real cluster, and a verification script that empties collections is one bad day away from being a data
+  loss incident.
+- **`Doctor` carries `isAcceptingPatients` separately from the account's `isActive`.** A doctor on leave has
+  a live account, owns their past encounters, and simply is not taking bookings — one flag could not say both.
+- **A compound index `{ department, isAcceptingPatients }` on `Doctor` is declared now**, before step 8 asks
+  the query it serves. Adding an index to a collection that already has rows is a different operation from
+  declaring one on an empty collection.
 
 ---
 

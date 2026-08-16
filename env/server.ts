@@ -6,10 +6,9 @@ import { z } from 'zod';
   variable fails the build instead of surfacing as a runtime error on some request nobody
   made yet.
 
-  `MONGODB_URI` and `AUTH_SECRET` are optional for now: nothing reads the database until the
-  data model lands in step 3a, and nothing signs a session until authentication does in step
-  4. Each becomes required in the step that starts using it, so a clean clone still runs
-  today with no `.env.local` at all.
+  `AUTH_SECRET` is still optional: nothing signs a session until authentication lands in
+  step 4, and it becomes required there. `MONGODB_URI` became required with the data model —
+  a clean clone now needs a reachable database before it will build.
 */
 
 /*
@@ -50,11 +49,12 @@ export const env = createEnv({
       .transform(value => value === 'true'),
 
     /*
-      Required from step 3a onward. The database name is NOT read from this string —
-      `lib/mongodb.ts` passes it explicitly, so an Atlas URI copied without its path segment
-      cannot silently write to a database called `test`.
+      Required from here on: the data model landed, and every service reads it. The database
+      name is NOT taken from this string — `lib/mongodb.ts` passes it explicitly, so an
+      Atlas URI copied without its path segment cannot silently write to a database called
+      `test`.
     */
-    MONGODB_URI: optionalText,
+    MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
 
     /*
       Signs the session token from step 4. Becomes `min(32)` and required there — a missing
