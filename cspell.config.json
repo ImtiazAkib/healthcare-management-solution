@@ -26,6 +26,7 @@
     "commitlint",
     "cooldown",
     "formulary",
+    "gridfs",
     "inlines",
     "linecap",
     "llms",
@@ -44,10 +45,12 @@
     "outpatient",
     "pino",
     "prerenders",
+    "rebooking",
     "shadcn",
     "topbar",
     "triage",
     "uncoded",
+    "unpadded",
     "uppercased",
     "vercel"
   ]
