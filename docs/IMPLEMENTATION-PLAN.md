@@ -28,7 +28,7 @@ in a working state.
 | #                | Step                                    | Proposal phase | Status         |
 | ---------------- | --------------------------------------- | -------------- | -------------- |
 | [0](#step-0)     | Project scaffold                        | Phase 1–2      | ✅ Done        |
-| [1](#step-1)     | Foundations                             | Phase 2        | ⬜ Not started |
+| [1](#step-1)     | Foundations                             | Phase 2        | ✅ Done        |
 | [2](#step-2)     | SEO, structured data, llms.txt          | Phase 2        | ⬜ Not started |
 | [3a](#step-3a)   | Data model — identity & directory       | Phase 2–3      | ⬜ Not started |
 | [3b](#step-3b)   | Data model — clinical & scheduling      | Phase 2–3      | ⬜ Not started |
@@ -288,7 +288,7 @@ pushed anywhere.
 
 <a id="step-1"></a>
 
-### Step 1 — Foundations
+### Step 1 — Foundations ✅ Done
 
 **Goal.** Put the shared plumbing in place before any feature needs it, so no step has to invent its own
 error shape or read `process.env` directly.
@@ -331,9 +331,58 @@ constants/database.const.ts · datetime.const.ts · index.ts
   is not. This is the first place the rule appears and it holds everywhere after.
 - Adds `@t3-oss/env-nextjs`, `zod`, `pino`, `pino-pretty`.
 
-**Acceptance.** `APP_BASE_URL=not-a-url npm run build` fails before the build starts, naming the variable and
-the reason; the Result helpers are exported from `@/lib/result` and typed end to end; `cn()` merges conflicting
-Tailwind classes with the caller's `className` winning; lint, format and build are green.
+**Acceptance.** ✅ Verified. `APP_BASE_URL=not-a-url npm run build` fails **before the build starts**, printing
+`❌ Invalid environment variables` with `path: [ 'APP_BASE_URL' ], message: 'Invalid URL'` and pointing at
+`env/server.ts`; `LOG_LEVEL=chatty` fails the same way and lists the six values it will accept. The opposite
+branch was checked too: a `.env.local` copied from `.env.example` — which really does ship `MONGODB_URI=` and
+`AUTH_SECRET=` blank — compiles, so `blankAsAbsent` does what it exists for.
+
+The Result, codes and zod layers were exercised at **runtime**, not just type-checked: 26 assertions covering
+every factory's shape (`emptySuccess` has no `result` key at all; `singleFailureWithErrors` nulls the result
+and keeps `field`; `listFailure` returns `[]` rather than `null`; an empty errors array throws instead of
+producing a failure with no reason), the five-digit code layout (`20002` validation, `50001` auth), the
+encode/decode round trip **including a message that itself contains the delimiter**, and `ZodError` mapping —
+two issues in, two `ErrorDto`s out, codes unpacked, `email` and the nested `contact.phone` both named, no
+message still carrying `__|__`.
+
+The logger was run in both transports: pretty and colorized in development with the context bound by
+`createLoggerWithContext` and `err` serialized, single-line JSON under `NODE_ENV=production`, and
+`LOG_LEVEL=debug` genuinely letting through the line that `info` suppresses.
+
+Lint, format and build are green, and the landing page still renders in a fresh tab with **no console messages
+of any level** and every request 200.
+
+**Deviations from the plan, and why.**
+
+- **`MONGODB_URI` and `AUTH_SECRET` ship optional, not required.** Nothing reads the database until
+  [step 3a](#step-3a) and nothing signs a session until [step 4](#step-4), so a clean clone still runs with no
+  `.env.local` at all. Each becomes required in the step that starts using it. This is why acceptance was
+  proven with an **invalid** value and an unknown enum rather than a missing one — there is nothing mandatory
+  yet to leave out.
+- **`env/client.ts` ships with an empty `client: {}`.** The app has no `NEXT_PUBLIC_*` variable; the file
+  exists so the first one gets declared and validated there instead of being read off `process.env`.
+- **`constants/rate-limit.const.ts` landed here, not in [step 21a](#step-21a).** `withTooManyRequests()` was
+  in this step's deliverables and needs a `Retry-After` value; a magic number in a response header is a value
+  nobody can find later. The file holds that one constant. The limiter — windows, keys, counter collection —
+  is still 21a.
+- **`tsx` was installed here rather than in [step 3a](#step-3a).** It is the tool this project uses to run
+  TypeScript outside Next, and without it the Result and zod layers could only be _claimed_ to work. Running
+  the check was worth pulling one dev dependency forward by two steps.
+- **`lib/logger.ts` exports pino directly**, with no adapter wrapper. There is no older call signature here to
+  preserve, so an adapter would be indirection with nothing behind it. Call sites use pino's own API:
+  `log.info({ patientId }, 'message')`.
+- **`next.config.ts` gained `serverExternalPackages`.** The pino transport worker breaks when bundled, so
+  `pino` (plus `pino-pretty` outside production) has to be required at runtime from `node_modules`.
+- **`lib/mongodb.ts` now reads `env.MONGODB_URI`**, replacing the `process.env` seam step 0 left. Its
+  `if (!uri) throw` stays for now and becomes unreachable in step 3a, when the schema makes the variable
+  required — which is the point of moving the check into the schema rather than leaving it in the caller.
+- **`withNotFound()` carries a clinical note.** It is also the correct answer for a record the caller may not
+  read, because confirming that a medical file exists is itself a disclosure. Written down where the helper
+  is, so the choice between it and `withForbidden()` is not made fresh at every call site.
+- **A trap worth recording for whoever repeats the blank-value check:** in PowerShell, `$env:X = ''` _deletes_
+  the variable rather than setting it empty, so that spelling tests "unset" and silently proves nothing about
+  `blankAsAbsent`. The real test is a `.env.local` file with blank right-hand sides, which is also exactly
+  what `cp .env.example .env.local` produces.
 
 ---
 

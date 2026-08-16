@@ -1,5 +1,12 @@
 import type { NextConfig } from 'next';
 
+/*
+  Imported for the side effect, not for a value: both modules validate on load, so a missing
+  or malformed variable fails the build here rather than surfacing on some request later.
+*/
+import '@/env/client';
+import '@/env/server';
+
 const production = process.env.NODE_ENV === 'production';
 
 /*
@@ -23,6 +30,9 @@ const nextConfig: NextConfig = {
     navigates by in-page anchor — every other route arrives with the step that builds it.
   */
   typedRoutes: true,
+
+  // The pino transport worker breaks when bundled.
+  serverExternalPackages: production ? ['pino'] : ['pino', 'pino-pretty'],
 
   images: {
     deviceSizes: [640, 768, 1024, 1280, 1536, 1920],
