@@ -26,18 +26,6 @@ globalWithMongoose.mongooseCache = cache;
 
 export async function connectToDatabase(): Promise<typeof mongoose> {
   /*
-    Read through the validated `env` module, never `process.env` — that is what keeps the
-    validation honest. It is still optional at this step, because nothing reads the database
-    until the data model lands in step 3a; there it becomes required and this guard becomes
-    unreachable, which is the point of moving it into the schema.
-  */
-  const uri = env.MONGODB_URI;
-
-  if (!uri) {
-    throw new Error('MONGODB_URI is not set.');
-  }
-
-  /*
     A cached Mongoose object is not necessarily a live socket. After an idle period the
     driver can close it while this module cache survives, which otherwise leaves the first
     request in a newly opened tab waiting on a dead connection. Reuse only an actively
@@ -53,7 +41,13 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   }
 
   if (!cache.promise) {
-    cache.promise = mongoose.connect(uri, {
+    /*
+      Read through the validated `env` module, never `process.env` — that is what keeps the
+      validation honest, and why there is no missing-value check here: `MONGODB_URI` is
+      required by the schema from step 3a, so an absent one fails the build rather than the
+      first request that needed a database.
+    */
+    cache.promise = mongoose.connect(env.MONGODB_URI, {
       // Owned by the code, not by whoever pasted the connection string.
       dbName: DATABASE_NAME,
       // Fail fast instead of queueing operations against a database that is not there.

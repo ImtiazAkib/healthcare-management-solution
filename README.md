@@ -6,10 +6,10 @@ communication in one platform, with role-based dashboards for **administrators**
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 
-> **Current state: steps 0–2 of 27 complete.** The toolchain, the design system, the public landing page, the
-> validated environment, the result/error layer, the SEO surface and the cached Mongoose connection are in
-> place. Everything below marked _(from step N)_ describes a convention this project follows but has not
-> reached yet; see [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
+> **Current state: steps 0–3a of 27 complete.** The toolchain, the design system, the public landing page,
+> the validated environment, the result/error layer, the SEO surface and the identity/directory data model
+> are in place. Everything below marked _(from step N)_ describes a convention this project follows but has
+> not reached yet; see [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
 
 ---
 
@@ -87,8 +87,8 @@ that changes relative to the reference project this one follows, is in the plan'
 
 ## Getting started
 
-**Prerequisites:** Node.js 20+, npm, and — from step 3a — a MongoDB you can reach, either a local `mongod` or
-a free Atlas cluster.
+**Prerequisites:** Node.js 20+, npm, and a MongoDB you can reach — a local `mongod` or a free Atlas cluster.
+The build validates `MONGODB_URI` before it starts, so set up [the environment](#environment) first.
 
 ```bash
 npm install
@@ -111,7 +111,7 @@ cp .env.example .env.local
 | `LOG_LEVEL`      | No, defaults `info`       | `fatal` · `error` · `warn` · `info` · `debug` · `trace`              |
 | `APP_BASE_URL`   | No, defaults to localhost | Absolute origin — canonical, sitemap and OG URLs use it (step 2)     |
 | `ROBOTS_ENABLED` | No, defaults `false`      | Set `true` on production only; anything else stays out of the index  |
-| `MONGODB_URI`    | **Yes, from step 3a**     | Local or Atlas. The database name is set in code, not read from this |
+| `MONGODB_URI`    | **Yes**                   | Local or Atlas. The database name is set in code, not read from this |
 | `AUTH_SECRET`    | **Yes, from step 4**      | At least 32 random characters                                        |
 
 Every variable is declared in [env/server.ts](env/server.ts) and validated with zod. That module is imported
@@ -134,17 +134,19 @@ fail validation before anybody had typed anything wrong.
 
 ## Scripts
 
-| Script                 | Description                                                |
-| ---------------------- | ---------------------------------------------------------- |
-| `npm run dev`          | Start the dev server                                       |
-| `npm run build`        | Production build (`output: 'standalone'`)                  |
-| `npm run start`        | Serve the production build                                 |
-| `npm run lint`         | ESLint — import order, cspell, canonical classes, Prettier |
-| `npm run lint:fix`     | ESLint with `--fix`                                        |
-| `npm run format`       | Prettier check                                             |
-| `npm run format:write` | Prettier write                                             |
+| Script                      | Description                                                |
+| --------------------------- | ---------------------------------------------------------- |
+| `npm run dev`               | Start the dev server                                       |
+| `npm run build`             | Production build (`output: 'standalone'`)                  |
+| `npm run start`             | Serve the production build                                 |
+| `npm run lint`              | ESLint — import order, cspell, canonical classes, Prettier |
+| `npm run lint:fix`          | ESLint with `--fix`                                        |
+| `npm run format`            | Prettier check                                             |
+| `npm run format:write`      | Prettier write                                             |
+| `npm run seed:super-admin`  | Create the super administrator (see below)                 |
+| `npm run verify:data-model` | Exercise the models against the database, then clean up    |
 
-The `seed:*` and `verify:*` scripts arrive with the services they exercise.
+The remaining `verify:*` scripts arrive with the services they exercise.
 
 ## Project structure
 
@@ -164,12 +166,13 @@ components/
   ui/               shadcn (base-nova) primitives
 constants/          Structural data, route table and the error-code registry
 env/                Zod-validated server and client environment
-models/             Mongoose models                                   (step 3a)
+models/             Mongoose models — user, department, doctor, patient
+scripts/            seed-super-admin · verify-data-model
 lib/
   api/              Route-handler response helpers — withOk, withBadRequest, withForbidden…
   auth/             session · session-cookie · current-user · guards  (step 4)
   result/           SingleResult · ListResult · EmptyResult and their factories
-  schemas/          Zod schemas, {entity}-{action}.schema.ts          (step 3a)
+  schemas/          Zod schemas, {entity}-{action}.schema.ts
   services/         One class per entity                              (step 4)
   utils/            Every helper, barrelled — `@/lib/utils` resolves here
   logger.ts         pino — JSON in production, pretty in development
@@ -351,6 +354,59 @@ instance, which is what otherwise leaves the first request in a newly opened tab
 path segment, and a missing one silently routes every write to a database called `test` — the app works and
 nothing complains. `connectToDatabase()` passes `dbName: DATABASE_NAME` explicitly, so no environment can get
 it wrong.
+
+### Models
+
+One per file in `models/`, each guarded with `mongoose.models.X ?? mongoose.model('X', schema)` so hot reload
+re-uses the compiled model instead of redefining it.
+
+| Model        | Holds                                                                           |
+| ------------ | ------------------------------------------------------------------------------- |
+| `User`       | Identity, credentials, role and the approval flags. **Nothing clinical**        |
+| `Department` | Name, code, description, head doctor                                            |
+| `Doctor`     | Account, department, specialization, registration number, fee, room             |
+| `Patient`    | Account, medical record number, blood group, allergies, conditions, next of kin |
+
+**A patient's clinical record is a separate document from their account**, and that line is the one the whole
+data model is drawn along. `User` answers "who is asking" and is read on every sign-in; `Patient` answers
+"what is known about them" and is read deliberately. Keeping allergies and conditions off the account means
+they are never in the document a session token is minted from, and it is what lets step 21a audit a _clinical_
+read as distinct from an ordinary one.
+
+Passwords are hashed in the model's `pre('save')` hook, so every path that saves a user gets it, including the
+seed script. The field carries `select: false`: it is absent unless a query asks for it with
+`.select('+password')`. It is also **optional** — reception registers a patient before that person has an
+account they can open, and `comparePassword` refuses rather than throwing when there is none.
+
+Two constraints are indexes rather than service checks, because a check is a rule the next caller can forget:
+exactly one super administrator (a partial unique index on the role), and one doctor or patient record per
+account.
+
+### DTOs
+
+Nothing reaches a component as a Mongoose document. Each entity has a mapper in `types/{entity}.dto.ts` that
+names every field explicitly — so `password`, `_id` and `__v` cannot leak by being forgotten, and a new
+clinical field stays invisible until someone deliberately adds it. Mappers take a structural entity type
+rather than a `HydratedDocument`, so they accept both hydrated documents and `.lean()` results.
+
+**`Patient` has two mappers, and which one you reach for is a decision.** `patientFromEntity` is the full
+clinical record. `patientSummaryFromEntities` is a name, a record number, an age and a phone — what a queue
+row, a search result or an appointment line actually needs. The summary is the default for lists, because a
+list screen is exactly where a clinical record leaks by being convenient.
+
+### Seeding the first administrator
+
+Every account is created by somebody already signed in, which leaves the first one with no way in. That is
+what the seed script is for — and it seeds the **super administrator**, not an administrator: there is exactly
+one, it cannot be created or changed through any screen, and it is the account that creates the first
+administrator. Pass the credentials in the environment rather than on the command line, so the password stays
+out of shell history:
+
+```bash
+SEED_SUPER_ADMIN_NAME="Hospital Director" SEED_SUPER_ADMIN_EMAIL="director@hospital.example" SEED_SUPER_ADMIN_PASSWORD="…" npm run seed:super-admin
+```
+
+Re-running it never resets an existing password — if the email is already registered it reports and stops.
 
 ### The Result pattern
 
