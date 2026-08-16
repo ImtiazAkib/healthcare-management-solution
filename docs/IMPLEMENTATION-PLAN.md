@@ -31,7 +31,7 @@ in a working state.
 | [1](#step-1)     | Foundations                             | Phase 2        | ✅ Done        |
 | [2](#step-2)     | SEO, structured data, llms.txt          | Phase 2        | ✅ Done        |
 | [3a](#step-3a)   | Data model — identity & directory       | Phase 2–3      | ✅ Done        |
-| [3b](#step-3b)   | Data model — clinical & scheduling      | Phase 2–3      | ⬜ Not started |
+| [3b](#step-3b)   | Data model — clinical & scheduling      | Phase 2–3      | ✅ Done        |
 | [4](#step-4)     | Authentication                          | Phase 3        | ⬜ Not started |
 | [5](#step-5)     | Dashboard shell & RBAC                  | Phase 3        | ⬜ Not started |
 | [6](#step-6)     | Admin — staff accounts                  | Phase 3        | ⬜ Not started |
@@ -615,7 +615,7 @@ SEED_SUPER_ADMIN_NAME="Hospital Director" SEED_SUPER_ADMIN_EMAIL="director@hospi
 
 <a id="step-3b"></a>
 
-### Step 3b — Data model: clinical and scheduling
+### Step 3b — Data model: clinical and scheduling ✅ Done
 
 **Goal.** The records the clinical workflow reads and writes, so no later step invents its own shape for a
 visit, an order or a result.
@@ -646,16 +646,19 @@ constants/schedule.const.ts · appointment.const.ts · encounter.const.ts · lab
 **Notes.**
 
 - **Times are 24-hour `HH:mm` strings**, zero-padded, so `startTime < endTime` is a plain string comparison —
-  and so is the overlap test that step 8's conflict detection runs. Dates are stored as a date-only value at
-  midnight in the pinned timezone, never as "now".
+  and so is the overlap test that step 8's conflict detection runs. **Calendar dates are `YYYY-MM-DD` strings
+  for the same reason**: a day is not an instant, and the double-booking index matches on the value, so it
+  must be produced by one helper rather than computed per caller.
 - `Appointment.status` is a closed set: `REQUESTED` · `CONFIRMED` · `CHECKED_IN` · `IN_CONSULTATION` ·
   `COMPLETED` · `CANCELLED` · `NO_SHOW`. Which transitions are legal is a service rule, not a schema rule —
   the schema only says which values exist. Statuses live in `types/appointment-status.ts` as a `const` object
   plus a derived union, the way roles do.
 - `tokenNo` is the queue position for the doctor on that date. It is assigned when the patient checks in, not
   when the appointment is booked, because a queue is about who is present.
-- **A vitals reading is a value object, not a document.** It is embedded in the encounter: whoever recorded it,
-  when, and the readings themselves. A nurse in step 14 writes it; nothing else does.
+- **A vitals reading is a value object, not a document** — embedded on the **appointment**, carrying whoever
+  recorded it and when. It sits there rather than on the encounter because a nurse records it at check-in and
+  the encounter is not opened until the doctor starts; the encounter reads it. A nurse in step 14 writes it;
+  nothing else does.
 - `LabReport.file` mirrors the reference's material shape, and `storageKey` is **absent from the DTO** — it
   describes where bytes sit on the server, and the download route resolves it after checking access.
 - Diagnoses are free text plus an optional code field. No ICD dictionary is shipped; pretending to a coding
@@ -664,9 +667,68 @@ constants/schedule.const.ts · appointment.const.ts · encounter.const.ts · lab
 - Compound indexes that the queries in steps 8–12 will need are declared here, not retrofitted:
   `{ doctor, date }`, `{ patient, date }`, `{ patient, createdAt }`, `{ labOrder }`.
 
-**Acceptance.** Verified against a real cluster with temporary records: every enum rejects a value outside its
-set, `HH:mm` validation rejects `9:30` and `24:00`, an appointment cannot be saved without a patient and a
-doctor, every DTO mapper emits exactly its named keys, and `LabReportDto` carries no `storageKey`.
+**Acceptance.** ✅ Verified against the real Atlas cluster by `npm run verify:clinical-model` — **60 checks,
+all passing**, every fixture removed afterwards. `npm run verify:data-model` was re-run and still passes, so
+step 3a did not regress.
+
+The headline is the **double-booking index, proven rather than assumed**. A second appointment for the same
+doctor, date and start time is refused with a duplicate-key error; cancelling the first **frees the slot** and
+a third booking of it succeeds; and the same time on another day is not a clash. That is the partial unique
+index doing exactly what it was written for, and it settled an open question — `$in` inside a
+`partialFilterExpression` is accepted by this cluster, so the slot-holding status set can be expressed
+directly rather than through a maintained boolean.
+
+Also proven: `9:00` and `24:00` are both refused by the model's `HH:mm` pattern; a block ending before it
+starts is refused by the `pre('validate')` hook, and so is one whose `effectiveTo` precedes its
+`effectiveFrom`; an appointment without a patient or without a doctor is refused; a status, a day of the week,
+a prescription frequency and a report MIME type outside their sets are each refused; **a lab report cannot be
+released without a verifier**; one appointment cannot hold two encounters and one order cannot hold two
+reports; a temperature of 986 is refused by the model _and_ by the schema; a blank vitals box parses to
+absent rather than to zero; and `LabReportDto` carries **no `storageKey`** while still carrying the file's
+name, type and size.
+
+Lint, format and build are green.
+
+**Deviations from the plan, and why.**
+
+- **Vitals live on the `Appointment`, not the `Encounter`** — and this corrects a contradiction in the plan
+  itself. Step 3b said vitals are embedded in the encounter; [step 14](#step-14) said a nurse records them at
+  check-in and the encounter reads them; and [step 10](#step-10) says the encounter is opened from an
+  appointment that is already `CHECKED_IN`. All three cannot hold: at check-in there is no encounter to embed
+  anything in. The appointment is the document that exists at that moment, so the vitals hang off it and the
+  encounter reads them. Step 14's description was right and step 3b's was wrong.
+- **`triagePriority` ships on the appointment now**, defaulting to `routine`, even though a nurse sets it in
+  step 14. The queue in [step 9](#step-9) sorts on it, and a field that two later steps both need is a data
+  model decision rather than a feature one.
+- **`date` is a `YYYY-MM-DD` string, not a `Date`.** The plan said "a date-only value at midnight in the
+  pinned timezone". That would make every equality query depend on every caller computing the same instant the
+  same way — and **the double-booking index is an equality match on this field**, so two code paths drifting
+  by an hour would not collide where they must. A string produced by one helper cannot drift. It is also the
+  same argument the plan already makes for storing times as `HH:mm`.
+- **`Encounter` carries an `addenda` array**, which the plan did not itemize. Step 10 says a completed
+  encounter is corrected by addendum rather than edit; that needs a place to put them, and inventing it in
+  step 10 would mean a migration.
+- **`constants/prescription.const.ts` landed here**, not in [step 11](#step-11). The model needs the closed
+  frequency list to enumerate it.
+- **`lib/utils/datetime.utils.ts` landed here.** It was named in the plan's localization delta but had no
+  consumer until a calendar date needed producing. It holds the `Intl` formatters, `toCalendarDate`,
+  `dayOfWeekFor`, the minutes/time conversions and `ageInYears` — the last computed by comparing calendar
+  dates rather than dividing milliseconds, because a division gets leap years subtly wrong and a subtly wrong
+  age is the difference between an adult and a pediatric reference range.
+- **`LabOrder.tests` records names, not references to the priced catalogue.** `ServiceItem` arrives in
+  [step 6b](#step-6b), and an order raised today should not change meaning if a service is renamed tomorrow.
+  Linking an order line to a priced item is billing's job in [step 19](#step-19).
+- **A second verification script**, `verify:clinical-model`, rather than extending `verify:data-model`. One
+  file covering ten models is one nobody reads.
+- **`vitals-record.schema.ts` and the appointment status/triage schemas** were split out rather than folded
+  into the create schemas. Recording vitals, moving a status and setting triage are three different
+  permissions held by three different roles; one schema for all of them would be one action for all of them.
+- **The three "invalid enum" assertions go through `Document.set`, not a cast.** `npm run build` caught what
+  `tsx` did not: `tsx` strips types without checking them, so a script can run green and still not compile.
+  The compiler was right to refuse `'someday'` as a day and `'maybe'` as a status — casting around it would be
+  the unchecked cast this project bans, so the values are written by path, which is how a request that never
+  saw the types would arrive, and validation still runs on save. **Worth carrying forward: a verify script
+  passing is not the same as it type-checking, and only the build tells you the difference.**
 
 ---
 
@@ -1216,7 +1278,7 @@ lib/utils/vitals.utils.ts   ranges, BMI, out-of-range flagging
   validation, not noticed by a doctor later.
 - **Out-of-range is flagged, never diagnosed.** The UI marks a reading outside the reference range and says
   nothing about what it means. Ranges live in `constants/vitals.const.ts` with their source noted, and they are
-  adult ranges — the paediatric case is [Backlog](#backlog), and the app says so rather than quietly applying
+  adult ranges — the pediatric case is [Backlog](#backlog), and the app says so rather than quietly applying
   the wrong band.
 - Triage priority is `ROUTINE` · `URGENT` · `EMERGENCY`, and it reorders the queue ahead of token order.
   Setting it is a nurse action and it is recorded with who set it.
@@ -1723,7 +1785,7 @@ Real, out of scope for now, and here so they are not lost:
 | Revoking a live session                   | The JWT is self-contained, so deactivation takes effect at the next sign-in. A `sessionVersion` checked per request reverses [step 4](#step-4)'s no-round-trip decision |
 | ICD-10 diagnosis coding                   | Needs a licensed dataset. [Step 3b](#step-3b) ships a labelled free-text field with an optional code rather than a coding standard the app cannot validate              |
 | Drug database and interaction checking    | Same reason, higher stakes: a formulary that misses an interaction is worse than none. [Step 11](#step-11) validates the field, not the drug                            |
-| Paediatric vitals reference ranges        | [Step 14](#step-14) ships adult bands and says so. Age-banded ranges are a data table plus a rule, and applying the wrong band silently is the failure to avoid         |
+| Pediatric vitals reference ranges         | [Step 14](#step-14) ships adult bands and says so. Age-banded ranges are a data table plus a rule, and applying the wrong band silently is the failure to avoid         |
 | Patient-reported allergies and conditions | [Step 16](#step-16) refuses patient edits to clinical fields. A separate patient-reported field that a clinician confirms is the right shape, and it is its own change  |
 | Online payment                            | [Step 19](#step-19) ships the gateway interface with a manual implementation. A real provider needs credentials, a merchant account and a reachable webhook             |
 | Refunds                                   | Not a negative payment — a decision with a policy behind it                                                                                                             |

@@ -6,10 +6,11 @@ communication in one platform, with role-based dashboards for **administrators**
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 
-> **Current state: steps 0–3a of 27 complete.** The toolchain, the design system, the public landing page,
-> the validated environment, the result/error layer, the SEO surface and the identity/directory data model
-> are in place. Everything below marked _(from step N)_ describes a convention this project follows but has
-> not reached yet; see [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
+> **Current state: steps 0–3b of 27 complete.** The toolchain, the design system, the public landing page,
+> the validated environment, the result/error layer, the SEO surface and the whole data model — identity,
+> directory, scheduling and clinical — are in place. Everything below marked _(from step N)_ describes a
+> convention this project follows but has not reached yet; see
+> [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
 
 ---
 
@@ -134,19 +135,23 @@ fail validation before anybody had typed anything wrong.
 
 ## Scripts
 
-| Script                      | Description                                                |
-| --------------------------- | ---------------------------------------------------------- |
-| `npm run dev`               | Start the dev server                                       |
-| `npm run build`             | Production build (`output: 'standalone'`)                  |
-| `npm run start`             | Serve the production build                                 |
-| `npm run lint`              | ESLint — import order, cspell, canonical classes, Prettier |
-| `npm run lint:fix`          | ESLint with `--fix`                                        |
-| `npm run format`            | Prettier check                                             |
-| `npm run format:write`      | Prettier write                                             |
-| `npm run seed:super-admin`  | Create the super administrator (see below)                 |
-| `npm run verify:data-model` | Exercise the models against the database, then clean up    |
+| Script                          | Description                                                |
+| ------------------------------- | ---------------------------------------------------------- |
+| `npm run dev`                   | Start the dev server                                       |
+| `npm run build`                 | Production build (`output: 'standalone'`)                  |
+| `npm run start`                 | Serve the production build                                 |
+| `npm run lint`                  | ESLint — import order, cspell, canonical classes, Prettier |
+| `npm run lint:fix`              | ESLint with `--fix`                                        |
+| `npm run format`                | Prettier check                                             |
+| `npm run format:write`          | Prettier write                                             |
+| `npm run seed:super-admin`      | Create the super administrator (see below)                 |
+| `npm run verify:data-model`     | Exercise the identity and directory models, then clean up  |
+| `npm run verify:clinical-model` | Exercise the scheduling and clinical models, then clean up |
 
-The remaining `verify:*` scripts arrive with the services they exercise.
+The remaining `verify:*` scripts arrive with the services they exercise. Both of the above write to and delete
+from the database `MONGODB_URI` points at. Every fixture is tagged with a run-scoped suffix and removed in a
+`finally` block, and the removal is itself asserted — but they run against a real cluster, which is worth
+knowing before running them anywhere that matters.
 
 ## Project structure
 
@@ -166,8 +171,8 @@ components/
   ui/               shadcn (base-nova) primitives
 constants/          Structural data, route table and the error-code registry
 env/                Zod-validated server and client environment
-models/             Mongoose models — user, department, doctor, patient
-scripts/            seed-super-admin · verify-data-model
+models/             Mongoose models — the ten below
+scripts/            seed-super-admin · verify-data-model · verify-clinical-model
 lib/
   api/              Route-handler response helpers — withOk, withBadRequest, withForbidden…
   auth/             session · session-cookie · current-user · guards  (step 4)
@@ -360,12 +365,32 @@ it wrong.
 One per file in `models/`, each guarded with `mongoose.models.X ?? mongoose.model('X', schema)` so hot reload
 re-uses the compiled model instead of redefining it.
 
-| Model        | Holds                                                                           |
-| ------------ | ------------------------------------------------------------------------------- |
-| `User`       | Identity, credentials, role and the approval flags. **Nothing clinical**        |
-| `Department` | Name, code, description, head doctor                                            |
-| `Doctor`     | Account, department, specialization, registration number, fee, room             |
-| `Patient`    | Account, medical record number, blood group, allergies, conditions, next of kin |
+| Model          | Holds                                                                                |
+| -------------- | ------------------------------------------------------------------------------------ |
+| `User`         | Identity, credentials, role and the approval flags. **Nothing clinical**             |
+| `Department`   | Name, code, description, head doctor                                                 |
+| `Doctor`       | Account, department, specialization, registration number, fee, room                  |
+| `Patient`      | Account, medical record number, blood group, allergies, conditions, next of kin      |
+| `Availability` | A doctor's recurring weekly block: day, hours, slot length, room, effective dates    |
+| `Appointment`  | Patient, doctor, day, slot, status, triage, token — and the vitals taken at check-in |
+| `Encounter`    | The consultation: complaint, examination, diagnoses, notes, and dated addenda        |
+| `Prescription` | Items with a closed frequency list, advice, issue time, supersession                 |
+| `LabOrder`     | Tests requested, priority, and where the order has reached                           |
+| `LabReport`    | Findings, the stored file, who verified it and when it was released                  |
+
+**Times are `HH:mm` strings and calendar dates are `YYYY-MM-DD` strings**, both zero-padded. That is not
+laziness about types: it makes `startTime < endTime` a plain string comparison, makes the overlap test between
+two blocks arithmetic-free, and — most importantly — makes the double-booking index an equality match on a
+value produced by exactly one helper. A `Date` would carry an instant, and "the 17th" would mean whatever
+timezone each caller happened to apply.
+
+**Double-booking is prevented by an index, not by a check.** Reading "is this slot free" and then writing the
+booking are two round trips, so two requests arriving together both read free and both write. The unique index
+on `{ doctor, date, startTime }` is partial over the statuses that still hold their slot, so a cancelled
+appointment gives its time back instead of reserving it forever.
+
+**Vitals sit on the appointment, not the encounter.** A nurse records them at check-in and the doctor opens
+the encounter afterwards, so at the moment they are taken there is no encounter to put them in.
 
 **A patient's clinical record is a separate document from their account**, and that line is the one the whole
 data model is drawn along. `User` answers "who is asking" and is read on every sign-in; `Patient` answers
