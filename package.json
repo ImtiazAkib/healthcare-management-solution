@@ -11,11 +11,14 @@
     "lint:fix": "eslint --fix",
     "format": "prettier **/*.{ts,tsx,js,mjs,html,scss,json,md} --check",
     "format:write": "prettier **/*.{ts,tsx,js,mjs,html,scss,json,md} --write",
+    "seed:super-admin": "tsx --env-file-if-exists=.env.local scripts/seed-super-admin.ts",
+    "verify:data-model": "tsx --env-file-if-exists=.env.local scripts/verify-data-model.ts",
     "prepare": "husky"
   },
   "dependencies": {
     "@base-ui/react": "1.6.0",
     "@t3-oss/env-nextjs": "0.13.11",
+    "bcryptjs": "3.0.3",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "lucide-react": "1.28.0",

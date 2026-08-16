@@ -1,4 +1,5 @@
 import { COMMON_AUTH, COMMON_BUSINESS, COMMON_DATABASE, COMMON_VALIDATION } from './codes-common.const';
+import { USERS_AUTH, USERS_BUSINESS, USERS_DATABASE, USERS_VALIDATION } from './codes-users.const';
 
 /*
   Central codes registry organized by layers.
@@ -14,7 +15,9 @@ import { COMMON_AUTH, COMMON_BUSINESS, COMMON_DATABASE, COMMON_VALIDATION } from
   registers it here — so every code in the application is reachable from one place, none of
   them collide, and no taxonomy is invented for a feature that does not exist yet.
 
-  Only the common codes exist today; each layer below therefore holds one entry.
+  Common and users exist today. The user schemas are the first ones a service consumes, in
+  the authentication step — the other entities get their codes when the services that raise
+  them land, and until then their validation messages decode to code 0 and still render.
 */
 export const CODES = {
   /**
@@ -22,6 +25,7 @@ export const CODES = {
    */
   DATABASE: {
     COMMON: COMMON_DATABASE, // 10xxx
+    USERS: USERS_DATABASE, // 11xxx
   },
 
   /**
@@ -29,6 +33,7 @@ export const CODES = {
    */
   VALIDATION: {
     COMMON: COMMON_VALIDATION, // 20xxx
+    USERS: USERS_VALIDATION, // 21xxx
   },
 
   /**
@@ -36,6 +41,7 @@ export const CODES = {
    */
   BUSINESS: {
     COMMON: COMMON_BUSINESS, // 30xxx
+    USERS: USERS_BUSINESS, // 31xxx
   },
 
   /**
@@ -43,5 +49,6 @@ export const CODES = {
    */
   AUTH: {
     COMMON: COMMON_AUTH, // 50xxx
+    USERS: USERS_AUTH, // 51xxx
   },
 } as const;
