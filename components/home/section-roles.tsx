@@ -1,4 +1,4 @@
-import { ROLE_VISUALS, SECTION_IDS } from '@/constants';
+import { ROLES, SECTION_IDS } from '@/constants';
 
 import { Container } from '@/components/shared';
 
@@ -18,60 +18,9 @@ export function SectionRoles() {
         </div>
 
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          <RoleCard
-            visual={ROLE_VISUALS.ADMIN}
-            title="Administrator"
-            summary="Runs the hospital's record of itself — people, departments, prices and the audit trail."
-            capabilities={[
-              'Create and approve staff accounts',
-              'Manage departments and the service catalogue',
-              'Raise invoices and record payments',
-              'Read the analytics and the access trail',
-            ]}
-          />
-
-          <RoleCard
-            visual={ROLE_VISUALS.DOCTOR}
-            title="Doctor"
-            summary="Sees the history before the consultation starts, and writes what happened during it."
-            capabilities={[
-              'Open the day’s queue and consult',
-              'Read a patient’s full timeline',
-              'Write diagnoses and treatment notes',
-              'Issue prescriptions and order tests',
-            ]}
-          />
-
-          <RoleCard
-            visual={ROLE_VISUALS.NURSE}
-            title="Nurse"
-            summary="Owns the first five minutes — check-in, vitals and the triage priority that reorders the queue."
-            capabilities={[
-              'Check patients in and assign tokens',
-              'Record vitals with range checking',
-              'Set triage priority',
-              'Never writes a diagnosis',
-            ]}
-          />
-
-          <RoleCard
-            visual={ROLE_VISUALS.LAB}
-            title="Diagnostic lab"
-            summary="Takes the order, does the work, and releases the result once it has been verified."
-            capabilities={['Work the incoming order list', 'Upload reports as PDF or image', 'Verify before release', 'Bill diagnostic services']}
-          />
-
-          <RoleCard
-            visual={ROLE_VISUALS.PATIENT}
-            title="Patient"
-            summary="Their own record, and nothing else — resolved from the session, never from a URL."
-            capabilities={[
-              'Book, reschedule and cancel appointments',
-              'Read prescriptions and released reports',
-              'Follow their own visit history',
-              'See invoices and what is still owed',
-            ]}
-          />
+          {ROLES.map(x => (
+            <RoleCard key={x.title} visual={x.visual} title={x.title} summary={x.summary} capabilities={x.capabilities} />
+          ))}
         </div>
       </Container>
     </section>

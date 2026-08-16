@@ -2,9 +2,10 @@ import type { Metadata, Viewport } from 'next';
 
 import { Inter, Poppins } from 'next/font/google';
 
-import { APP_DATA } from '@/constants';
+import { APP_DATA, SEO } from '@/constants';
+import { env } from '@/env/server';
 
-import { cn } from '@/lib/utils';
+import { buildAbsoluteUrl, cn } from '@/lib/utils';
 
 import { SkipToContent } from '@/components/shared';
 
@@ -25,19 +26,37 @@ type RootLayoutProps = {
   children: React.ReactNode;
 };
 
+/*
+  Static rather than `generateMetadata`: with one language and no dynamic segment there is
+  nothing to await. `metadataBase` is what makes the canonical link, the OG URL and the
+  social card resolve as absolute instead of silently rendering relative.
+*/
 export const metadata: Metadata = {
+  metadataBase: new URL(env.APP_BASE_URL),
   title: APP_DATA.NAME,
   description: APP_DATA.DESCRIPTION,
-  authors: [{ name: APP_DATA.NAME }],
-  /*
-    Nothing is indexed until a deployment opts in. Step 2 moves this onto the validated
-    `ROBOTS_ENABLED` flag and gives it a second, independent signal in `robots.ts`; until
-    then the safe answer is the only answer.
-  */
-  robots: {
-    index: false,
-    follow: false,
+  keywords: [...SEO.KEYWORDS],
+  alternates: {
+    canonical: buildAbsoluteUrl(env.APP_BASE_URL),
   },
+  openGraph: {
+    type: 'website',
+    siteName: APP_DATA.SHORT_NAME,
+    url: buildAbsoluteUrl(env.APP_BASE_URL),
+    title: APP_DATA.NAME,
+    description: APP_DATA.DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: APP_DATA.NAME,
+    description: APP_DATA.DESCRIPTION,
+  },
+  // Matches robots.txt: a deployment that has not opted into indexing says so twice.
+  robots: {
+    index: env.ROBOTS_ENABLED,
+    follow: env.ROBOTS_ENABLED,
+  },
+  authors: [{ name: APP_DATA.NAME }],
 };
 
 /*
