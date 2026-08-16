@@ -29,7 +29,7 @@ in a working state.
 | ---------------- | --------------------------------------- | -------------- | -------------- |
 | [0](#step-0)     | Project scaffold                        | Phase 1–2      | ✅ Done        |
 | [1](#step-1)     | Foundations                             | Phase 2        | ✅ Done        |
-| [2](#step-2)     | SEO, structured data, llms.txt          | Phase 2        | ⬜ Not started |
+| [2](#step-2)     | SEO, structured data, llms.txt          | Phase 2        | ✅ Done        |
 | [3a](#step-3a)   | Data model — identity & directory       | Phase 2–3      | ⬜ Not started |
 | [3b](#step-3b)   | Data model — clinical & scheduling      | Phase 2–3      | ⬜ Not started |
 | [4](#step-4)     | Authentication                          | Phase 3        | ⬜ Not started |
@@ -136,12 +136,14 @@ same layering, same naming, same hooks.
 - Dates and numbers are formatted by named helpers in `lib/utils/datetime.utils.ts`, each holding a module-level
   `Intl.DateTimeFormat` pinned to `DEFAULT_TIMEZONE`. No `numberingSystem` pinning — that existed only for
   Bengali numerals.
-- **Copy is literal English text in the JSX**, written in the component that renders it. There is no
-  `constants/copy.const.ts` and there will not be one: a constants file for text would recreate the
-  indirection i18n forced without the payoff. `constants/{feature}.const.ts` keeps holding structural data —
-  icons, accent classes, ids, limits, route hrefs. Two exceptions carry strings and are already precedented:
-  `constants/app-data.const.ts` (the product's own name, tagline, description) and `constants/codes-*.const.ts`
-  (server-side error messages).
+- **Copy is literal English text in the JSX**, written in the component that renders it — _until a second
+  consumer exists_, at which point it moves to that feature's `constants/{feature}.const.ts` beside the
+  structural data. There is no `constants/copy.const.ts` and there will not be one: a single file for all text
+  would recreate the indirection i18n forced without the payoff. Two constants files carry strings
+  unconditionally and are precedented in the reference: `constants/app-data.const.ts` (the product's own name,
+  tagline, description) and `constants/codes-*.const.ts` (server-side error messages).
+  [Step 2](#step-2) is where the second-consumer clause was earned — `/llms.txt` restates the landing lists —
+  and its deviations record what moved.
 - The `labels` prop bundle **collapses** where it only existed to move server-resolved strings across the
   client boundary — a client component can hold its own literals now. It **survives** where it prevents drift
   between two callers rendering the same form, becoming a plain `const` object rather than a builder that takes
@@ -387,7 +389,7 @@ of any level** and every request 200.
 
 <a id="step-2"></a>
 
-### Step 2 — SEO, structured data and llms.txt
+### Step 2 — SEO, structured data and llms.txt ✅ Done
 
 **Goal.** Make the public surface legible to search engines, social cards and LLM crawlers — and make sure
 the clinical surface is never indexed.
@@ -427,10 +429,68 @@ lib/utils/llms.utils.ts · lib/utils/url.utils.ts
   credentials in front of crawlers, which is worse here than in an academic app.
 - Adds `schema-dts`. `next/og` ships with Next.
 
-**Acceptance.** All five routes return 200 with absolute URLs built from `APP_BASE_URL`; the rendered head has
-a canonical link and a JSON-LD graph typed `Organization` → `WebSite` → `SoftwareApplication`; both branches of
-the robots gate are checked — default emits `Disallow: /` plus `noindex, nofollow`, `ROBOTS_ENABLED=true`
-emits `Allow: /` with every private segment disallowed.
+**Acceptance.** ✅ Verified in the browser. All five routes return 200 with absolute URLs built from
+`APP_BASE_URL` — `/sitemap.xml` carries one `<url>` with `<changefreq>monthly</changefreq>` and
+`<priority>1</priority>`, `/llms.txt` and `/llms-full.txt` serve `text/plain; charset=utf-8` built from the
+same lists the page renders, `/opengraph-image` returns `image/png`. The rendered head has an absolute
+canonical, nine keywords, the full `og:` set with the 1200×630 card wired in automatically, `twitter:card`
+`summary_large_image`, and **zero `hreflang` links** — which is the whole point of the no-localization delta.
+
+The JSON-LD graph is `Organization` → `WebSite` → `SoftwareApplication`, and the `@id` cross-links were
+checked rather than eyeballed: every `publisher` reference resolves to a node inside the same document.
+
+Both branches of the robots gate were exercised by flipping the real variable and restarting: default emits
+`Disallow: /` plus `noindex, nofollow`; `ROBOTS_ENABLED=true` emits `Allow: /` plus `index, follow`, with no
+`Disallow` lines because nothing private exists yet.
+
+Lint, format and build are green; the build prerenders eight routes. The landing page renders in a fresh tab
+with no console messages beyond React's devtools notice — five role cards, six module cards, six stack cards,
+eight roadmap rows — and no horizontal scroll at either 1265px or 375px.
+
+**Deviations from the plan, and why.**
+
+- **The landing page's list copy moved into `constants/home.const.ts`, and this revises a rule I set in
+  [Differences](#differences-from-the-reference-project).** That section says copy is a literal in the
+  component that renders it and constants hold structural data only. `/llms.txt` and `/llms-full.txt` are the
+  first thing to want that copy from outside the component, and they restate all four lists. The reference
+  could keep its cards inline because both readers pulled from one translation dictionary; with no dictionary,
+  inline means six module descriptions maintained in two files — exactly the drift the dictionary prevented.
+  **The rule is now: copy stays inline until something other than the component needs it, and then it moves to
+  the feature's constants file beside the structural data it belongs with.** Prose only one place renders —
+  the hero, the section headings — stayed in the components. Four list constants moved: `ROLES`, `FEATURES`,
+  `TECH_STACK`, `ROADMAP_PHASES`, each `as const satisfies` its model type, and the four sections now map
+  over them instead of repeating markup five times.
+- **Four new type files** — `role-card.ts`, `feature-card.ts`, `tech-card.ts`, `roadmap-phase.ts` — because
+  those lists now carry content and not just an icon. The visual-only `RoleVisual` / `FeatureVisual` survive
+  as the half the card component actually renders.
+- **`SEO.PUBLIC_ROUTES` enumerates the sitemap explicitly** rather than deriving entries from the filesystem.
+  This app will grow routes that name a patient, and a self-discovering sitemap publishes one the first time
+  somebody forgets to think about it.
+- **`DISALLOWED_PATHS` is empty today** and that is correct, not an omission: `PROTECTED_SEGMENTS` is empty
+  until [step 5](#step-5) and there is no sign-in route until [step 4](#step-4). It is derived rather than
+  written out so it fills itself as those routes land. `PRIVATE_SEGMENTS` stays module-private inside
+  `seo.const.ts`, as in the reference, rather than being exported from `routes.const.ts`.
+- **`lib/utils/url.utils.ts` holds `buildAbsoluteUrl`**, not the reference's `buildLocaleUrl` /
+  `splitLocaleFromPathname`. Both of those existed only to add and strip a `/bn` prefix. What survives is the
+  slash arithmetic every metadata route would otherwise reinvent.
+- **`buildJsonLdGraph` drops the `language` parameter** and hardcodes `inLanguage: 'en'`.
+  `applicationCategory` is `HealthApplication`. The organization node still describes the project itself — it
+  becomes a `MedicalOrganization` with address and accreditation when a real facility is named, because
+  inventing clinical credentials for a crawler is worse than publishing a vague node.
+- **`env/server.ts` needed no change.** `ROBOTS_ENABLED` was already declared in [step 1](#step-1), so this
+  step only started reading it.
+- **`/llms.txt` and `/llms-full.txt` build as dynamic (`ƒ`) routes**, not static, because they read
+  `env.APP_BASE_URL` at request time. That is the same trade the reference makes and it costs nothing: they
+  are cached for an hour by their own `Cache-Control`.
+- **One opengraph card at the app root**, not one per locale. Its gradient is the measured sRGB of `--primary`
+  and `--primary-hover` from the light palette, so the card is the same teal the app is; satori has no
+  stylesheet, so those two values are repeated as literals with a comment saying where they came from.
+
+**A note on how this was verified.** The first console read after the change showed a wall of
+`Export ROLE_VISUALS doesn't exist` errors, which were **stale** — buffered in a tab from the dev-server
+session that was running while `home.const.ts` had been rewritten but the sections had not. The build was
+already green at that point. Re-checked in a fresh tab against the restarted server, which is the only
+reading worth trusting after a server restart.
 
 ---
 
