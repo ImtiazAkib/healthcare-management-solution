@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 
+import { env } from '@/env/server';
+
 // Imported from the module, not the barrel — this file is loaded by standalone
 // scripts, and the barrel re-exports UI constants that pull in `lucide-react`.
 import { DATABASE_NAME } from '@/constants/database.const';
@@ -24,11 +26,12 @@ globalWithMongoose.mongooseCache = cache;
 
 export async function connectToDatabase(): Promise<typeof mongoose> {
   /*
-    Read straight off `process.env` for now. Step 1 introduces the zod-validated `env`
-    module and this becomes `env.MONGODB_URI`, at which point a missing or malformed value
-    fails the build rather than the first request that needs a database.
+    Read through the validated `env` module, never `process.env` — that is what keeps the
+    validation honest. It is still optional at this step, because nothing reads the database
+    until the data model lands in step 3a; there it becomes required and this guard becomes
+    unreachable, which is the point of moving it into the schema.
   */
-  const uri = process.env.MONGODB_URI;
+  const uri = env.MONGODB_URI;
 
   if (!uri) {
     throw new Error('MONGODB_URI is not set.');

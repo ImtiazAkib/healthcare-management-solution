@@ -6,9 +6,10 @@ communication in one platform, with role-based dashboards for **administrators**
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 
-> **Current state: step 0 of 27 complete.** The toolchain, the design system, the public landing page and the
-> cached Mongoose connection are in place. Everything below marked _(from step N)_ describes a convention this
-> project follows but has not reached yet; see [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
+> **Current state: steps 0–1 of 27 complete.** The toolchain, the design system, the public landing page, the
+> validated environment, the result/error layer and the cached Mongoose connection are in place. Everything
+> below marked _(from step N)_ describes a convention this project follows but has not reached yet; see
+> [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
 
 ---
 
@@ -106,15 +107,29 @@ cp .env.example .env.local
 
 | Variable         | Required                  | Notes                                                                |
 | ---------------- | ------------------------- | -------------------------------------------------------------------- |
-| `LOG_LEVEL`      | No, defaults `info`       | `fatal` · `error` · `warn` · `info` · `debug` · `trace` (step 1)     |
+| `LOG_LEVEL`      | No, defaults `info`       | `fatal` · `error` · `warn` · `info` · `debug` · `trace`              |
 | `APP_BASE_URL`   | No, defaults to localhost | Absolute origin — canonical, sitemap and OG URLs use it (step 2)     |
 | `ROBOTS_ENABLED` | No, defaults `false`      | Set `true` on production only; anything else stays out of the index  |
 | `MONGODB_URI`    | **Yes, from step 3a**     | Local or Atlas. The database name is set in code, not read from this |
 | `AUTH_SECRET`    | **Yes, from step 4**      | At least 32 random characters                                        |
 
-From step 1 every variable is declared in `env/server.ts` and validated with zod, and that module is imported
-by [next.config.ts](next.config.ts) — so an invalid value **fails the build** rather than surfacing on some
-request later. Read variables through `env`, never `process.env`; that is what keeps the validation honest.
+Every variable is declared in [env/server.ts](env/server.ts) and validated with zod. That module is imported
+by [next.config.ts](next.config.ts), so an invalid value **fails the build** rather than surfacing on some
+request later:
+
+```
+❌ Invalid environment variables: [ { path: [ 'APP_BASE_URL' ], message: 'Invalid URL' } ]
+```
+
+Read variables through `env`, never `process.env` — that is what keeps the validation honest.
+
+```ts
+import { env } from '@/env/server';
+```
+
+A blank value is read as absence, deliberately: `.env.example` ships the optional keys empty, so copying it —
+the documented first step — hands every one of them an empty string, and without that a clean clone would
+fail validation before anybody had typed anything wrong.
 
 ## Scripts
 
@@ -147,15 +162,16 @@ components/
   shared/           AppLogo, Container, SkipToContent
   ui/               shadcn (base-nova) primitives
 constants/          Structural data, route table and the error-code registry
-env/                Zod-validated server and client environment       (step 1)
+env/                Zod-validated server and client environment
 models/             Mongoose models                                   (step 3a)
 lib/
-  api/              Route-handler response helpers                    (step 1)
+  api/              Route-handler response helpers — withOk, withBadRequest, withForbidden…
   auth/             session · session-cookie · current-user · guards  (step 4)
-  result/           SingleResult · ListResult · EmptyResult           (step 1)
+  result/           SingleResult · ListResult · EmptyResult and their factories
   schemas/          Zod schemas, {entity}-{action}.schema.ts          (step 3a)
   services/         One class per entity                              (step 4)
   utils/            Every helper, barrelled — `@/lib/utils` resolves here
+  logger.ts         pino — JSON in production, pretty in development
   mongodb.ts        globalThis-cached Mongoose connection
 types/              One type per file, re-exported from types/index.ts
 docs/               IMPLEMENTATION-PLAN.md
@@ -294,12 +310,39 @@ path segment, and a missing one silently routes every write to a database called
 nothing complains. `connectToDatabase()` passes `dbName: DATABASE_NAME` explicitly, so no environment can get
 it wrong.
 
-### The Result pattern (from step 1)
+### The Result pattern
 
 Services and server actions never throw for an expected failure — they return a result. Three shapes cover
-everything: `EmptyResult`, `SingleResult<T>` and `ListResult<T>`, all carrying `success`, `errors` and
-`messages`. Error codes are five digits, `[layer][feature][sequence]`. Only genuinely exceptional things
-throw; a refused action is data, not an exception.
+everything: `EmptyResult` (nothing to return), `SingleResult<T>` (one item), `ListResult<T>` (many, with
+optional paging info). All three carry `success`, `errors` and `messages`.
+
+```ts
+import { CODES } from '@/constants';
+import { createError, singleFailure, singleSuccess } from '@/lib/result';
+
+if (!patient) {
+  const { CODE, MESSAGE } = CODES.VALIDATION.COMMON.RESOURCE_NOT_FOUND;
+  return singleFailure<PatientDto>(createError(CODE, MESSAGE));
+}
+
+return singleSuccess(patientFromEntity(patient));
+```
+
+Error codes live in [constants/codes.const.ts](constants/codes.const.ts) as five digits —
+`[layer][feature][sequence]`, so `20002` is a common validation error and `50001` an authorization one. The
+feature digits are allocated up front; the file that fills one arrives **with the service that raises those
+codes**, not before. Zod messages carry their code inline (`encodeZodMessage`), and `mapZodErrorsToErrorDto()`
+unpacks a whole `ZodError` into field-level `ErrorDto`s a form can render.
+
+Only genuinely exceptional things throw. A refused action is data, not an exception.
+
+### Logging
+
+[lib/logger.ts](lib/logger.ts) exports pino — pretty in development, single-line JSON in production, gated by
+`LOG_LEVEL`. `createLoggerWithContext('patient.service')` tags every line with where it came from.
+
+**No patient identifier, name, address or clinical value is ever a log field.** An id is fine, a diagnosis is
+not. Logs travel to places this app's access rules do not reach.
 
 ## Roadmap
 
