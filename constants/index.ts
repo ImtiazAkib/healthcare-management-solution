@@ -4,6 +4,8 @@ export * from './datetime.const';
 export * from './routes.const';
 export * from './a11y.const';
 export * from './rate-limit.const';
+export * from './seo.const';
+export * from './json-ld.const';
 export * from './codes-common.const';
 export * from './codes.const';
 export * from './home.const';

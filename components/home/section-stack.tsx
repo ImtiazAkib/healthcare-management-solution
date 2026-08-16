@@ -1,4 +1,4 @@
-import { SECTION_IDS, TECH_LABELS } from '@/constants';
+import { SECTION_IDS, TECH_STACK } from '@/constants';
 
 import { Container } from '@/components/shared';
 
@@ -18,12 +18,9 @@ export function SectionStack() {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          <TechCard label={TECH_LABELS.NEXTJS} role="App Router — server rendering and route handlers together" />
-          <TechCard label={TECH_LABELS.REACT} role="Server Components by default; client only where state lives" />
-          <TechCard label={TECH_LABELS.TYPESCRIPT} role="Strict. No implicit any, no unchecked casts into a DTO" />
-          <TechCard label={TECH_LABELS.TAILWIND} role="Design tokens, and every class checked against them" />
-          <TechCard label={TECH_LABELS.MONGODB} role="Document-shaped clinical records with real indexes" />
-          <TechCard label={TECH_LABELS.MONGOOSE} role="Schemas, hooks and the hash that never leaves the model" />
+          {TECH_STACK.map(x => (
+            <TechCard key={x.label} label={x.label} role={x.role} />
+          ))}
         </div>
       </Container>
     </section>
