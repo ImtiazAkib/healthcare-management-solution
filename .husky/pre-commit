@@ -1,0 +1,53 @@
+# `symbolic-ref` first, because `rev-parse --abbrev-ref HEAD` fails outright on an unborn
+# branch — which is every repository's first commit, the one time nobody wants to reach
+# for --no-verify. `rev-parse` is the fallback for a detached HEAD, where there is no
+# symbolic ref to read.
+CURRENT_BRANCH=$(git symbolic-ref --short -q HEAD || git rev-parse --abbrev-ref HEAD)
+ALLOWED_PREFIXES="feature/|bugfix/|release/|hotfix/"
+ALLOWED_DISPLAY="[feature/], [bugfix/], [release/], [hotfix/]"
+BRANCH_PATTERN="^($ALLOWED_PREFIXES)[a-z0-9-]+$"
+
+# --------------------------
+# TASK 1: BRANCH NAME CHECK
+# --------------------------
+
+echo "Checking branch name..."
+
+if [ "$CURRENT_BRANCH" = "master" ] || [ "$CURRENT_BRANCH" = "develop" ]; then
+    echo "Branch [$CURRENT_BRANCH] detected. Skipping branch name check."
+elif ! echo "$CURRENT_BRANCH" | grep -Eq "$BRANCH_PATTERN"; then
+    echo "Commit aborted. Reason: Invalid branch name."
+    echo "--------------------------------------------------------"
+    echo "Branch naming rules failed:"
+    echo "   1. Must start with one of the prefixes: $ALLOWED_DISPLAY."
+    echo "   2. The rest of the branch name (after '/') must be lowercase (a-z), and contain only letters, numbers, and hyphens (-)."
+    echo "--------------------------------------------------------"
+    echo "Example:"
+    echo "   [feature/step-3a-data-model]"
+    echo "   [bugfix/fix-issue-10]"
+    echo "--------------------------------------------------------"
+    echo "Forbidden:"
+    echo "   [feature/DataModel]"
+    echo "   [feature/data_model]"
+    echo "   [feature/data model]"
+    echo "--------------------------------------------------------"
+    echo "Branch: [$CURRENT_BRANCH]"
+    exit 1
+else
+    echo "Branch name check successful."
+    echo "Branch: [$CURRENT_BRANCH]"
+fi
+
+# --------------------------
+# TASK 2: LINT
+# --------------------------
+
+echo "Running lint..."
+npm run lint
+
+# --------------------------
+# TASK 3: FORMAT CHECK
+# --------------------------
+
+echo "Checking formatting..."
+npm run format

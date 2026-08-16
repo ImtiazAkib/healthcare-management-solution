@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "streetsidesoftware.code-spell-checker",
+    "aaron-bond.better-comments",
+    "donjayamanne.githistory",
+    "pranaygp.vscode-css-peek",
+    "nhoizey.gremlins",
+    "gruntfuggly.todo-tree",
+    "yoavbls.pretty-ts-errors",
+    "bradlc.vscode-tailwindcss",
+    "mongodb.mongodb-vscode"
+  ]
+}

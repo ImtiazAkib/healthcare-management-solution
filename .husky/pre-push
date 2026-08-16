@@ -1,0 +1,10 @@
+# --------------------------
+# TYPE CHECK + BUILD
+# --------------------------
+#
+# `lint` and `format` already ran on every commit. The build is what catches type
+# errors, a broken metadata route or a bad env schema — cheap here, expensive after
+# it reaches CI or a branch someone else pulls.
+
+echo "Running production build before push..."
+npm run build
