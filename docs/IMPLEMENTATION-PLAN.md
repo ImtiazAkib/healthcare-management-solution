@@ -241,9 +241,8 @@ The hooks were exercised rather than assumed: `pre-commit` ran the branch check,
 `npm run format` on the real commit; a message with no Conventional Commits type was refused by `commitlint`
 with `type-empty`; and a commit from a branch named `Feature/BadName` was aborted before lint even started.
 
-**Not verified by me:** `pre-push`. There is no remote yet, so the hook has never fired — the `npm run build`
-it runs is green, but that the hook itself intercepts a push is one thing left to see the first time this is
-pushed anywhere.
+`pre-push` was verified later, on the first real push to `origin`: it intercepted the push, ran
+`npm run build` to completion and let it through only once the build was green.
 
 **Deviations from the plan, and why.**
 
