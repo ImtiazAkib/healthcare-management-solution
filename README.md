@@ -6,10 +6,10 @@ communication in one platform, with role-based dashboards for **administrators**
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 
-> **Current state: steps 0–3b of 27 complete.** The toolchain, the design system, the public landing page,
-> the validated environment, the result/error layer, the SEO surface and the whole data model — identity,
-> directory, scheduling and clinical — are in place. Everything below marked _(from step N)_ describes a
-> convention this project follows but has not reached yet; see
+> **Current state: steps 0–4 of 27 complete.** The toolchain, the design system, the public landing page, the
+> validated environment, the result/error layer, the SEO surface, the whole data model and credential sign-in
+> with role-based access are in place. Everything below marked _(from step N)_ describes a convention this
+> project follows but has not reached yet; see
 > [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
 
 ---
@@ -27,9 +27,10 @@ Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 9. [Design system](#design-system)
 10. [SEO and structured data](#seo-and-structured-data)
 11. [Data layer](#data-layer)
-12. [Roadmap](#roadmap)
-13. [Toolchain notes](#toolchain-notes)
-14. [Deployment](#deployment)
+12. [Authentication](#authentication)
+13. [Roadmap](#roadmap)
+14. [Toolchain notes](#toolchain-notes)
+15. [Deployment](#deployment)
 
 ---
 
@@ -72,14 +73,14 @@ the audit trail, not the contents. ² The lab sees the orders addressed to it an
 
 ## Tech stack
 
-| Layer      | Choice                           | Why                                                              |
-| ---------- | -------------------------------- | ---------------------------------------------------------------- |
-| Framework  | Next.js 16 (App Router)          | Server rendering and the API layer in one codebase               |
-| UI         | React 19 + Tailwind CSS v4       | Design tokens, responsive by default                             |
-| Primitives | shadcn (`base-nova`) on Base UI  | Accessible components that match the token system                |
-| Language   | TypeScript (strict)              | No `any`, no unchecked casts                                     |
-| Database   | MongoDB + Mongoose               | Document-shaped data: encounters, orders, nested clinical values |
-| Auth       | `jose` session JWT (from step 4) | Signed httpOnly cookie carrying the role — no library in between |
+| Layer      | Choice                          | Why                                                              |
+| ---------- | ------------------------------- | ---------------------------------------------------------------- |
+| Framework  | Next.js 16 (App Router)         | Server rendering and the API layer in one codebase               |
+| UI         | React 19 + Tailwind CSS v4      | Design tokens, responsive by default                             |
+| Primitives | shadcn (`base-nova`) on Base UI | Accessible components that match the token system                |
+| Language   | TypeScript (strict)             | No `any`, no unchecked casts                                     |
+| Database   | MongoDB + Mongoose              | Document-shaped data: encounters, orders, nested clinical values |
+| Auth       | `jose` session JWT              | Signed httpOnly cookie carrying the role — no library in between |
 
 **The app ships in English only.** There is no next-intl, no `[locale]` segment and no `l10n/` folder; every
 user-facing string is a literal in the component that renders it. The reasoning, and the full list of what
@@ -113,7 +114,7 @@ cp .env.example .env.local
 | `APP_BASE_URL`   | No, defaults to localhost | Absolute origin — canonical, sitemap and OG URLs use it (step 2)     |
 | `ROBOTS_ENABLED` | No, defaults `false`      | Set `true` on production only; anything else stays out of the index  |
 | `MONGODB_URI`    | **Yes**                   | Local or Atlas. The database name is set in code, not read from this |
-| `AUTH_SECRET`    | **Yes, from step 4**      | At least 32 random characters                                        |
+| `AUTH_SECRET`    | **Yes**                   | At least 32 random characters — `openssl rand -base64 32`            |
 
 Every variable is declared in [env/server.ts](env/server.ts) and validated with zod. That module is imported
 by [next.config.ts](next.config.ts), so an invalid value **fails the build** rather than surfacing on some
@@ -129,24 +130,27 @@ Read variables through `env`, never `process.env` — that is what keeps the val
 import { env } from '@/env/server';
 ```
 
-A blank value is read as absence, deliberately: `.env.example` ships the optional keys empty, so copying it —
-the documented first step — hands every one of them an empty string, and without that a clean clone would
-fail validation before anybody had typed anything wrong.
+For the three variables that **have a default**, a blank value is read as absence, so blanking a line in
+`.env.local` rather than deleting it means "use the default" instead of failing on an empty string.
+
+`MONGODB_URI` and `AUTH_SECRET` have no safe default and a blank one **fails**, by design — which is why
+`cp .env.example .env.local` is the first step and filling those two in is the second.
 
 ## Scripts
 
-| Script                          | Description                                                |
-| ------------------------------- | ---------------------------------------------------------- |
-| `npm run dev`                   | Start the dev server                                       |
-| `npm run build`                 | Production build (`output: 'standalone'`)                  |
-| `npm run start`                 | Serve the production build                                 |
-| `npm run lint`                  | ESLint — import order, cspell, canonical classes, Prettier |
-| `npm run lint:fix`              | ESLint with `--fix`                                        |
-| `npm run format`                | Prettier check                                             |
-| `npm run format:write`          | Prettier write                                             |
-| `npm run seed:super-admin`      | Create the super administrator (see below)                 |
-| `npm run verify:data-model`     | Exercise the identity and directory models, then clean up  |
-| `npm run verify:clinical-model` | Exercise the scheduling and clinical models, then clean up |
+| Script                          | Description                                                       |
+| ------------------------------- | ----------------------------------------------------------------- |
+| `npm run dev`                   | Start the dev server                                              |
+| `npm run build`                 | Production build (`output: 'standalone'`)                         |
+| `npm run start`                 | Serve the production build                                        |
+| `npm run lint`                  | ESLint — import order, cspell, canonical classes, Prettier        |
+| `npm run lint:fix`              | ESLint with `--fix`                                               |
+| `npm run format`                | Prettier check                                                    |
+| `npm run format:write`          | Prettier write                                                    |
+| `npm run seed:super-admin`      | Create the super administrator (see below)                        |
+| `npm run verify:data-model`     | Exercise the identity and directory models, then clean up         |
+| `npm run verify:clinical-model` | Exercise the scheduling and clinical models, then clean up        |
+| `npm run verify:auth`           | Exercise the session token and credential refusals, then clean up |
 
 The remaining `verify:*` scripts arrive with the services they exercise. Both of the above write to and delete
 from the database `MONGODB_URI` points at. Every fixture is tagged with a run-scoped suffix and removed in a
@@ -159,11 +163,12 @@ knowing before running them anywhere that matters.
 app/
   layout.tsx        The document, the fonts, the skip link — no page chrome
   (marketing)/      Landing page — site header and footer
-  (auth)/           Sign-in, register, verify-email          (step 4, step 15)
-  (dashboard)/      admin · doctor · nurse · lab · patient   (step 5)
+  (auth)/           Sign-in — register and verify-email arrive in step 15
+  (dashboard)/      admin · doctor · nurse · lab · patient — the shell lands in step 5
+  unauthorized/     403 for a signed-in visitor in the wrong area
   api/              Route handlers — bytes never go through a Server Action
   globals.css · global-error.tsx · not-found.tsx · robots.ts · icon.svg
-proxy.ts            The route guard (Next 16's middleware file)  (step 4)
+proxy.ts            The route guard (Next 16's middleware file)
 components/
   home/             Landing sections — hero, roles, features, stack, roadmap
   layout/           SiteHeader, SiteFooter
@@ -175,10 +180,10 @@ models/             Mongoose models — the ten below
 scripts/            seed-super-admin · verify-data-model · verify-clinical-model
 lib/
   api/              Route-handler response helpers — withOk, withBadRequest, withForbidden…
-  auth/             session · session-cookie · current-user · guards  (step 4)
+  auth/             session · session-cookie · current-user · guards
   result/           SingleResult · ListResult · EmptyResult and their factories
   schemas/          Zod schemas, {entity}-{action}.schema.ts
-  services/         One class per entity                              (step 4)
+  services/         One class per entity — auth.service.ts is the first
   utils/            Every helper, barrelled — `@/lib/utils` resolves here
   logger.ts         pino — JSON in production, pretty in development
   mongodb.ts        globalThis-cached Mongoose connection
@@ -466,6 +471,102 @@ Only genuinely exceptional things throw. A refused action is data, not an except
 
 **No patient identifier, name, address or clinical value is ever a log field.** An id is fine, a diagnosis is
 not. Logs travel to places this app's access rules do not reach.
+
+## Authentication
+
+A session JWT signed with [`jose`](https://github.com/panva/jose), stored in an httpOnly cookie. No auth
+library sits in between — the pieces are small enough that owning them costs less than working around
+somebody else's abstraction.
+
+**Everybody signs in with their email address.** There is no separate identifier scheme: a patient who comes
+in twice a year will not have kept one, and a scheme half the users cannot remember is a support burden
+pretending to be security.
+
+### The pieces
+
+| File                           | Runs            | Does                                     |
+| ------------------------------ | --------------- | ---------------------------------------- |
+| `lib/auth/session.ts`          | Server and edge | Signs and verifies the token             |
+| `lib/auth/session-cookie.ts`   | Server only     | Sets and clears the cookie               |
+| `lib/auth/current-user.ts`     | Server only     | `getSessionUser()` for pages and layouts |
+| `lib/services/auth.service.ts` | Server only     | Checks credentials, returns a Result     |
+
+`proxy.ts` imports **`@/lib/auth/session` directly, not the barrel** — the barrel also exports the cookie
+helpers, which use `next/headers`, and that does not exist in the middleware runtime. Verifying a token needs
+only `jose`, which runs there fine.
+
+### What the session carries
+
+`userId`, `role`, `email`, `name` and `isApproved`, so a guarded page knows who is asking without a database
+round trip. **Nothing clinical** — no medical record number, no department, no patient id. A token is a bearer
+credential sitting in a cookie; anything minted into it is disclosed to whoever holds it and goes stale the
+moment the record changes.
+
+Two things `verifySessionToken()` does that are easy to leave out:
+
+- **Pins the algorithm.** `algorithms: ['HS256']` is what refuses a token arriving with `alg: none`.
+- **Parses the payload with zod after checking the signature.** A signature proves the token was minted here,
+  not that its shape still matches the current code — a token issued before a field was renamed verifies
+  perfectly and then hands back nonsense.
+
+The cookie is `httpOnly`, `sameSite: lax`, `secure` in production, and lives **one hour**. That is short for a
+web application and deliberate: these sessions are opened on shared machines at a nurses' station and a
+reception desk.
+
+Clearing it re-sets the cookie with `maxAge: 0` and the identical attribute block rather than calling
+`delete(name)` — a bare delete lands on the path the action ran at, leaving the real cookie in place.
+
+### Revocation
+
+`getSessionUser()` loads the live row on every call and refuses a session whose account has been deleted,
+deactivated, de-approved or had its role changed. So those actions take effect **at once** rather than waiting
+out the token — which matters more here than in most applications, because the accounts being revoked are the
+ones that read medical records.
+
+If the database cannot be reached the check **fails open** to the verified token. An outage must not lock a
+hospital out mid-shift, and the one-hour lifetime still bounds the exposure. That is a judgement call, and it
+is the one to revisit first if the threat model changes.
+
+`getSessionUser` is wrapped in React's `cache()`, so it runs **once per request** however many guards call
+it. A guarded page calls it at least twice — the layout, then the page's own role guard — and Next dedupes
+`fetch`, not Mongoose.
+
+### Refusals
+
+`AuthService.verifyCredentials()` checks the password **first**, then account state. An unknown address and a
+wrong password return the same code and the same sentence; "waiting for approval" or "deactivated" is only
+ever disclosed to somebody who has already proved they own the account. Otherwise the sign-in form doubles as
+a way to ask whether a given person is a patient here.
+
+**The same words are not enough — the refusals also cost the same time.** bcrypt at cost 12 is roughly 200ms,
+so returning early when no account is found would let anyone separate "no account" from "wrong password" with
+a stopwatch, whatever the response body said. The comparison therefore runs either way, against
+`ABSENT_PASSWORD_HASH`; `npm run verify:auth` times all three refusal paths and asserts they stay comparable.
+
+Reasons travel as codes, not sentences: the service returns a `SingleResult` carrying an `ErrorDto`, and the
+form renders the sentence for that code.
+
+### The route guard
+
+`PROTECTED_SEGMENTS` in [constants/routes.const.ts](constants/routes.const.ts) is the single source for both
+the guard and the `Disallow` list in robots.txt. The proxy answers "is there a session"; the page answers "is
+it the right one". Two guards, in [lib/auth/guards.ts](lib/auth/guards.ts):
+
+```ts
+const sessionUser = await requireSession(); // redirects to sign-in
+const admin = await requireAdminArea(); // redirects to /unauthorized
+```
+
+Both redirect rather than returning `null`, so no caller can forget the refused case and render a page to
+nobody.
+
+**A wrong role is not a missing session.** Sending both to sign-in would tell an already-authenticated nurse
+to sign in again, which reads as a bug rather than a refusal — so the wrong role gets `/unauthorized`, a 403
+naming the role and linking to the visitor's _own_ area.
+
+`requireAdminArea()` exists instead of `requireRole(ADMIN)` because the super administrator holds every
+administrator power and then some; `requireRole(ADMIN)` would lock the one account that owns the area out of
+it.
 
 ## Roadmap
 

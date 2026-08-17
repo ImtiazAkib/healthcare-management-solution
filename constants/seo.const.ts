@@ -12,7 +12,7 @@ import { PROTECTED_SEGMENTS, ROUTES } from './routes.const';
   The `Disallow` lines are only a request to well-behaved crawlers. The enforcing half is
   the `noindex` metadata on the dashboard layout, which lands with the shell.
 */
-const PRIVATE_SEGMENTS: readonly string[] = [...PROTECTED_SEGMENTS];
+const PRIVATE_SEGMENTS: readonly string[] = [ROUTES.SIGN_IN.HREF, ROUTES.UNAUTHORIZED.HREF, ...PROTECTED_SEGMENTS];
 
 export const SEO = {
   KEYWORDS: [
