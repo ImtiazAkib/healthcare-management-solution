@@ -8,6 +8,7 @@ import { Gender, UserRole } from '@/types';
   barrel re-exports `home.const.ts`, which pulls in `lucide-react` — fine in a React tree,
   dead weight in a seed script and fatal in a middleware bundle.
 */
+import { ABSENT_PASSWORD_HASH } from '@/constants/auth.const';
 import { USER_ROLES } from '@/constants/roles.const';
 import { ACCOUNT_FIELD_LIMITS, GENDERS } from '@/constants/users.const';
 
@@ -97,12 +98,17 @@ userSchema.pre('save', async function () {
 });
 
 /*
-  False when the account has no password at all, which is a counter-registered patient who
-  has not claimed it. `bcrypt.compare` against `undefined` would throw; a refusal is the
-  right answer and the caller should not have to special-case it.
+  Refuses when the account has no password at all — a counter-registered patient who has not
+  claimed it — but refuses **after doing the same work**, by comparing against a hash of a
+  value nothing will ever submit.
+
+  Returning false immediately would be correct and would leak: bcrypt at cost 12 is roughly
+  200ms, so a caller with a stopwatch could tell an unclaimed account from a wrong password
+  even though both answer with the same code and the same sentence. See the note on
+  `ABSENT_PASSWORD_HASH`.
 */
 userSchema.method('comparePassword', async function comparePassword(candidate: string) {
-  return this.password ? bcrypt.compare(candidate, this.password) : false;
+  return bcrypt.compare(candidate, this.password ?? ABSENT_PASSWORD_HASH);
 });
 
 /*

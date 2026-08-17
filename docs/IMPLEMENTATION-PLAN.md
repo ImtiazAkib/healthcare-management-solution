@@ -32,7 +32,7 @@ in a working state.
 | [2](#step-2)     | SEO, structured data, llms.txt          | Phase 2        | ✅ Done        |
 | [3a](#step-3a)   | Data model — identity & directory       | Phase 2–3      | ✅ Done        |
 | [3b](#step-3b)   | Data model — clinical & scheduling      | Phase 2–3      | ✅ Done        |
-| [4](#step-4)     | Authentication                          | Phase 3        | ⬜ Not started |
+| [4](#step-4)     | Authentication                          | Phase 3        | ✅ Done        |
 | [5](#step-5)     | Dashboard shell & RBAC                  | Phase 3        | ⬜ Not started |
 | [6](#step-6)     | Admin — staff accounts                  | Phase 3        | ⬜ Not started |
 | [6b](#step-6b)   | Admin — departments & service catalogue | Phase 3        | ⬜ Not started |
@@ -734,7 +734,7 @@ Lint, format and build are green.
 
 <a id="step-4"></a>
 
-### Step 4 — Authentication
+### Step 4 — Authentication ✅ Done
 
 **Goal.** Real sign-in, with the session carrying the role.
 
@@ -779,11 +779,104 @@ lib/utils/auth.utils.ts     resolveSignInErrorMessage(code)
   reads as a bug rather than a refusal.
 - Adds `jose`.
 
-**Acceptance.** The super administrator signs in and lands on the admin home; a wrong password, an unknown
-email, an unapproved account and a deactivated account each produce the correct message and no more; a
-tampered token, an `alg: none` token and an expired token are all refused; a signed-out request to a protected
-route redirects to sign-in with the intended destination in `?next=`; the cookie is `httpOnly` in the browser's
-storage inspector.
+**Acceptance.** ✅ Verified two ways — `npm run verify:auth` (**41 checks, all passing**, fixtures removed)
+and the real sign-in flow driven through the browser.
+
+**The token half attacks its own format**, because a signature check that is never handed a bad signature has
+not been tested. Refused: a tampered payload, a tampered signature, a missing signature, an **`alg: none`**
+header, an expired token, a token from another issuer, a token for another audience, a token signed with a
+different secret, and — correctly signed but still refused — a token carrying an unknown role or missing a
+claim, which is the case the post-signature zod parse exists for. The minted token pins `HS256` in its
+header, carries the issuer, audience and a one-hour expiry, and contains **no password and no clinical
+field**.
+
+**The credential half was checked for what it discloses.** An unknown address and a wrong password return the
+same code _and_ the same sentence, word for word. Account state is only ever revealed after the password
+matched: an unverified, unapproved or deactivated account gets its own message with the right password and a
+flat `INVALID_CREDENTIALS` with a wrong one. An account with **no password at all** — a patient registered at
+the counter — refuses rather than throwing, and is indistinguishable from a wrong password.
+
+**In the browser**, signed out: all five role areas redirect, and `/admin` lands on `/sign-in?next=%2Fadmin`.
+Signing in as a nurse through the real form: a wrong password shows "That email address and password do not
+match" and stays put; the right one lands on `/nurse`; **every other role area redirects to `/unauthorized`,
+not to sign-in**; `/unauthorized` names the role and offers the way back to `/nurse`; `/sign-in` redirects an
+already-signed-in visitor to their own area; and the landing header swaps "Sign in" for "My area".
+`document.cookie` is **empty throughout**, which is `httpOnly` doing its job. Signing out returns to
+`/sign-in`, and `/nurse` immediately redirects again.
+
+Lint, format and build are green; all three verify suites pass.
+
+**Deviations from the plan, and why.**
+
+- **Everybody signs in with their email address.** The reference issues login IDs like `S-2026-0042`; this
+  project does not. A patient who comes in twice a year will not have kept an issued identifier, and a scheme
+  that half the users cannot remember is a support burden pretending to be security. One field, one lookup.
+- **Five role-home pages and a thin `(dashboard)` layout were pulled forward from [step 5](#step-5).** The
+  step's whole subject is who may go where, and that cannot be verified against pages that do not exist. They
+  are one shared `RoleAreaPlaceholder` component rather than five near-identical pages, so step 5 replaces
+  them with one deletion.
+- **`PROTECTED_SEGMENTS` was filled in.** It shipped empty in step 2 because nothing private existed; it now
+  holds the five role segments and feeds both the proxy guard and the robots `Disallow` list, exactly as it
+  was designed to.
+- **No rate limiting in `verifyCredentials`.** The reference throttles by identifier before checking the
+  password. That belongs with the limiter in [step 21a](#step-21a), and adding half of it here would mean a
+  counter with no sweep.
+- **`constants/codes-auth.const.ts` does not exist.** The plan named it; the auth codes went into
+  `codes-users.const.ts` in [step 3a](#step-3a), where they sit beside the account they refuse.
+- **`signOutAction` takes no arguments.** The reference threads a locale through a hidden form field; with no
+  i18n there is one thing to do and no input that could change it.
+- **`guards.ts` has no `redirectTo` wrapper.** The reference needs one because next-intl's `redirect` is not
+  typed `never`, so it wraps it in a synchronous function ending in an unreachable `throw`. `redirect` from
+  `next/navigation` **is** typed `never`, so the guards call it directly and the compiler narrows correctly.
+- **`blankAsAbsent` now applies only to the three defaulted variables.** With `MONGODB_URI` and `AUTH_SECRET`
+  both required, reading a blank one as absent would turn a missing secret into a confusing failure further
+  down. A blank value should mean "use the default" only where there is a default.
+- **`SignOutButton` and five UI primitives** (`Input`, `Label`, `PasswordInput`, `FormMessage`, `Spinner`)
+  were added. The plan did not itemize them; a sign-in form and a verifiable sign-out need them.
+- **`components/auth/index.ts` deliberately omits `actions.ts`.** It is a `'use server'` module, and
+  re-exporting it through a barrel that client components import pulls every action into their graph. The two
+  components that call one import it by relative path, with the reason written in both places.
+- **The site header now reads the session**, which opts the landing page out of static generation. That is the
+  right trade for a header that has to reflect who is looking at it — a crawler carries no cookie and still
+  gets the signed-out version — but it is a real change to how `/` renders and is worth knowing.
+- **`/unauthorized` is not in `PROTECTED_SEGMENTS`.** Its own `requireSession()` guards it, which was verified:
+  a signed-out request to it redirects to sign-in rather than announcing an area the visitor cannot see.
+
+**A note on verification.** The console read after the change showed a wall of stale errors again — buffered
+in a long-lived tab across several server restarts, exactly as in [step 2](#step-2). Restarting the preview
+cleared them and the real console showed only HMR reconnect noise. **Second time this has cost a re-check: a
+tab that has survived a server restart is not a trustworthy console.**
+
+**Adversarial review, and what it caught.** Because this is the security-critical step, the finished surface
+was reviewed by four independent readers — one each for authorization bypass, session integrity, information
+disclosure and plain correctness — and every finding was then put to three separate skeptics instructed to
+refute it. Four findings survived all three, and all four are fixed:
+
+- **A timing oracle defeated the shared refusal, and this is the one that mattered.** `verifyCredentials`
+  returned early when no account was found, skipping the bcrypt comparison entirely — measured at **~0ms
+  against ~220ms** for a wrong password. The identical error code and the identical sentence hide _what_ was
+  wrong; they do nothing about a caller with a stopwatch, and in a hospital "does this address have an
+  account" is "is this person a patient here". The comparison now runs either way, against
+  `ABSENT_PASSWORD_HASH` — a real cost-12 hash of a value nothing will ever submit — and `comparePassword`
+  does the same for an account that has no password yet. **Verified, not asserted:** the script now times all
+  three refusals and they came back **283ms / 288ms / 284ms**.
+- **`getSessionUser` ran twice per guarded request.** The dashboard layout calls `requireSession()` and the
+  page then calls its own role guard, so one page view cost two `jwtVerify` calls and two database round
+  trips. Next dedupes `fetch`; it does not dedupe Mongoose. It is now wrapped in React's `cache()`.
+- **`types/session-user.ts` said the cookie lasts "a week".** It lasts an hour, and `auth.const.ts` argues
+  for the hour in as many words two files away. A comment that contradicts the constant it describes is worse
+  than no comment.
+- **My own expiry assertion was flaky.** `verify-auth.ts` asserted `exp - iat === MAX_AGE`, but jose reads
+  the clock twice in one builder chain, so a second boundary between them yields 3601 and fails the run at
+  random. It now asserts a one-second range, because a check nobody trusts gets ignored when it matters.
+
+Five further findings were reported and **refuted unanimously**, recorded here so they are not re-litigated:
+the omission of `isEmailVerified` from the session re-check (nothing in the app can un-verify an account, and
+sign-in still gates on it); the matcher excluding dotted paths (real regex reading, but there is no `app/api`
+directory and no protected path contains a dot); sign-out leaving the client router cache (a cookie write
+inside a Server Action already triggers Next's cache eviction); `.lean<UserEntity>()` over-typing a
+projection (the four unselected fields are never read); and `/unauthorized` answering 200 while presenting
+403 (`forbidden()` is experimental and unflagged in Next 16.3, and the refusal is the 307 that got you there).
 
 ---
 

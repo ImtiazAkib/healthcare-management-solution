@@ -1,16 +1,25 @@
 import Link from 'next/link';
 
-import { APP_DATA, ROUTES, SECTION_IDS } from '@/constants';
+import { APP_DATA, ROLE_HOME, ROUTES, SECTION_IDS } from '@/constants';
+
+import { getSessionUser } from '@/lib/auth';
 
 import { AppLogo, Container } from '@/components/shared';
 import { Button } from '@/components/ui';
 
 /*
-  No sign-in button yet: `typedRoutes` refuses a link to a route that does not exist, and
-  `/sign-in` arrives with authentication in step 4. Until then the header's only call to
-  action is the one anchor on the page.
+  Reads the session so the landing page knows the visitor is already signed in. Without it
+  the header only ever offered "Sign in", so somebody who closed the tab and came back was
+  shown a sign-in button with no way to their own area — even though their session was still
+  valid.
+
+  Reading the cookie opts this route out of static generation, which is the right trade for a
+  header that has to reflect who is looking at it. A crawler carries no cookie and still gets
+  the public, signed-out version.
 */
-export function SiteHeader() {
+export async function SiteHeader() {
+  const sessionUser = await getSessionUser();
+
   return (
     <header className="bg-background/80 border-border fixed inset-x-0 top-0 z-50 border-b backdrop-blur-md">
       {/*
@@ -42,9 +51,15 @@ export function SiteHeader() {
             </a>
           </nav>
 
-          <Button variant="outline" size="sm" nativeButton={false} render={<a href={`#${SECTION_IDS.ROLES}`} />}>
-            Explore the roles
-          </Button>
+          {sessionUser ? (
+            <Button variant="default" size="sm" nativeButton={false} render={<Link href={ROLE_HOME[sessionUser.role]} prefetch={false} />}>
+              My area
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" nativeButton={false} render={<Link href={ROUTES.SIGN_IN.HREF} />}>
+              Sign in
+            </Button>
+          )}
         </div>
       </Container>
     </header>
