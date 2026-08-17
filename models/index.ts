@@ -1,5 +1,6 @@
 export * from './user.model';
 export * from './department.model';
+export * from './service-item.model';
 export * from './doctor.model';
 export * from './patient.model';
 export * from './availability.model';

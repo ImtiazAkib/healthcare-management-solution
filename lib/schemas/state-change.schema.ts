@@ -29,6 +29,21 @@ export const DepartmentActivateSchema = z.object({ departmentId: objectIdField, 
 export type DepartmentActivateInput = z.input<typeof DepartmentActivateSchema>;
 export type DepartmentActivateOutput = z.output<typeof DepartmentActivateSchema>;
 
+export const DepartmentDeleteSchema = z.object({ departmentId: objectIdField });
+
+export type DepartmentDeleteInput = z.input<typeof DepartmentDeleteSchema>;
+export type DepartmentDeleteOutput = z.output<typeof DepartmentDeleteSchema>;
+
+export const ServiceItemActivateSchema = z.object({ serviceItemId: objectIdField, isActive: z.boolean() });
+
+export type ServiceItemActivateInput = z.input<typeof ServiceItemActivateSchema>;
+export type ServiceItemActivateOutput = z.output<typeof ServiceItemActivateSchema>;
+
+export const ServiceItemDeleteSchema = z.object({ serviceItemId: objectIdField });
+
+export type ServiceItemDeleteInput = z.input<typeof ServiceItemDeleteSchema>;
+export type ServiceItemDeleteOutput = z.output<typeof ServiceItemDeleteSchema>;
+
 export const DoctorAcceptingSchema = z.object({ doctorId: objectIdField, isAcceptingPatients: z.boolean() });
 
 export type DoctorAcceptingInput = z.input<typeof DoctorAcceptingSchema>;

@@ -18,6 +18,8 @@ export * from './prescription.dto';
 export * from './roadmap-phase';
 export * from './role-card';
 export * from './role-visual';
+export * from './service-category';
+export * from './service-item.dto';
 export * from './session-user';
 export * from './tech-card';
 export * from './triage-priority';
