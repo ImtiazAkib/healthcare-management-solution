@@ -6,10 +6,10 @@ communication in one platform, with role-based dashboards for **administrators**
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 
-> **Current state: steps 0–4 of 27 complete.** The toolchain, the design system, the public landing page, the
-> validated environment, the result/error layer, the SEO surface, the whole data model and credential sign-in
-> with role-based access are in place. Everything below marked _(from step N)_ describes a convention this
-> project follows but has not reached yet; see
+> **Current state: steps 0–5 of 27 complete.** The toolchain, the design system, the public landing page, the
+> validated environment, the result/error layer, the SEO surface, the whole data model, credential sign-in
+> and the role-scoped dashboard shell are in place. Everything below marked _(from step N)_ describes a
+> convention this project follows but has not reached yet; see
 > [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
 
 ---
@@ -164,7 +164,7 @@ app/
   layout.tsx        The document, the fonts, the skip link — no page chrome
   (marketing)/      Landing page — site header and footer
   (auth)/           Sign-in — register and verify-email arrive in step 15
-  (dashboard)/      admin · doctor · nurse · lab · patient — the shell lands in step 5
+  (dashboard)/      admin · doctor · nurse · lab · patient — one shell, sidebar, topbar, drawer
   unauthorized/     403 for a signed-in visitor in the wrong area
   api/              Route handlers — bytes never go through a Server Action
   globals.css · global-error.tsx · not-found.tsx · robots.ts · icon.svg
