@@ -1,4 +1,6 @@
 import { COMMON_AUTH, COMMON_BUSINESS, COMMON_DATABASE, COMMON_VALIDATION } from './codes-common.const';
+import { DEPARTMENTS_BUSINESS, DEPARTMENTS_DATABASE, DEPARTMENTS_VALIDATION } from './codes-departments.const';
+import { SERVICES_BUSINESS, SERVICES_DATABASE, SERVICES_VALIDATION } from './codes-services.const';
 import { USERS_AUTH, USERS_BUSINESS, USERS_DATABASE, USERS_VALIDATION } from './codes-users.const';
 
 /*
@@ -26,6 +28,8 @@ export const CODES = {
   DATABASE: {
     COMMON: COMMON_DATABASE, // 10xxx
     USERS: USERS_DATABASE, // 11xxx
+    DEPARTMENTS: DEPARTMENTS_DATABASE, // 13xxx
+    SERVICES: SERVICES_DATABASE, // 16xxx
   },
 
   /**
@@ -34,6 +38,8 @@ export const CODES = {
   VALIDATION: {
     COMMON: COMMON_VALIDATION, // 20xxx
     USERS: USERS_VALIDATION, // 21xxx
+    DEPARTMENTS: DEPARTMENTS_VALIDATION, // 23xxx
+    SERVICES: SERVICES_VALIDATION, // 26xxx
   },
 
   /**
@@ -42,6 +48,8 @@ export const CODES = {
   BUSINESS: {
     COMMON: COMMON_BUSINESS, // 30xxx
     USERS: USERS_BUSINESS, // 31xxx
+    DEPARTMENTS: DEPARTMENTS_BUSINESS, // 33xxx
+    SERVICES: SERVICES_BUSINESS, // 36xxx
   },
 
   /**

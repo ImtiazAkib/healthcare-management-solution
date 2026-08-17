@@ -11,6 +11,7 @@ export * from './class-name.utils';
 export * from './datetime.utils';
 export * from './error.utils';
 export * from './llms.utils';
+export * from './money.utils';
 export * from './mongo.utils';
 export * from './navigation.utils';
 export * from './phone.utils';

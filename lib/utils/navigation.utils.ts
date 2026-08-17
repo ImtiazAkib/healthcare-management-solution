@@ -1,6 +1,6 @@
 import type { Route } from 'next';
 
-import { LayoutDashboard, UsersRound } from 'lucide-react';
+import { Building2, ClipboardList, LayoutDashboard, UsersRound } from 'lucide-react';
 
 import { ADMIN_AREA_ROLES } from '@/constants/roles.const';
 import { ROLE_HOME, ROUTES } from '@/constants/routes.const';
@@ -40,6 +40,8 @@ export function resolveNavModel(role: UserRole): NavSection[] {
   const administration: NavItem[] = [];
   if (isAdminArea) {
     administration.push({ href: ROUTES.ADMIN_USERS.HREF, icon: UsersRound, label: 'Staff accounts' });
+    administration.push({ href: ROUTES.ADMIN_DEPARTMENTS.HREF, icon: Building2, label: 'Departments' });
+    administration.push({ href: ROUTES.ADMIN_SERVICES.HREF, icon: ClipboardList, label: 'Service catalogue' });
   }
 
   const sections: NavSection[] = [

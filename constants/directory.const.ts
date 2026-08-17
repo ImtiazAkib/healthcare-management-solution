@@ -1,3 +1,15 @@
+import { FILTER_ALL } from '@/constants/users.const';
+
+/**
+ * A department is either open or retired — the same two flags a service carries, and no third
+ * state. The filter reuses the shared "all" sentinel.
+ */
+export const DEPARTMENT_STATUS_FILTERS = {
+  ALL: FILTER_ALL,
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+} as const;
+
 /**
  * Field lengths for the directory the hospital keeps of itself — its departments and the
  * doctors who sit in them. Applied in both the zod schema and the Mongoose schema, for the
