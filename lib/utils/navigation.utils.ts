@@ -1,8 +1,9 @@
 import type { Route } from 'next';
 
-import { LayoutDashboard } from 'lucide-react';
+import { LayoutDashboard, UsersRound } from 'lucide-react';
 
-import { ROLE_HOME } from '@/constants/routes.const';
+import { ADMIN_AREA_ROLES } from '@/constants/roles.const';
+import { ROLE_HOME, ROUTES } from '@/constants/routes.const';
 
 import type { UserRole } from '@/types';
 import type { LucideIcon } from 'lucide-react';
@@ -34,7 +35,17 @@ export type Crumb = { label: string; current: boolean };
  * @returns The visible sections for this role, empty sections removed.
  */
 export function resolveNavModel(role: UserRole): NavSection[] {
-  const sections: NavSection[] = [{ id: 'overview', label: null, items: [{ href: ROLE_HOME[role], icon: LayoutDashboard, label: 'Overview' }] }];
+  const isAdminArea = ADMIN_AREA_ROLES.some(adminRole => adminRole === role);
+
+  const administration: NavItem[] = [];
+  if (isAdminArea) {
+    administration.push({ href: ROUTES.ADMIN_USERS.HREF, icon: UsersRound, label: 'Staff accounts' });
+  }
+
+  const sections: NavSection[] = [
+    { id: 'overview', label: null, items: [{ href: ROLE_HOME[role], icon: LayoutDashboard, label: 'Overview' }] },
+    { id: 'administration', label: 'Administration', items: administration },
+  ];
 
   return sections.filter(section => section.items.length > 0);
 }

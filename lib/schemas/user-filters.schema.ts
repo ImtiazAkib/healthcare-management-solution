@@ -1,22 +1,21 @@
 import { z } from 'zod';
 
-import { USER_ROLES } from '@/constants/roles.const';
+import { FILTER_ALL, USER_ROLE_FILTERS, USER_STATUS_FILTERS } from '@/constants/users.const';
 
 /*
-  What the users list may be narrowed by. Every field is optional and every one tolerates
-  the empty string, because these arrive from the URL through nuqs and an unset filter is a
-  blank query parameter rather than a missing one.
+  What the staff list may be narrowed by, after the URL is parsed.
 
-  `search` is not bounded to a pattern — it is a name or an email fragment somebody typed.
-  It is escaped before it reaches a Mongo `$regex`; see `escapeRegExp`.
+  Every field falls back rather than fails: these arrive from a query string somebody can
+  hand-edit, so a nonsense `?role=wizard` degrades to the unfiltered list instead of an error
+  page. `catch` is what does that — an invalid value becomes the default.
+
+  `query` is not bounded to a pattern — it is a name or an email fragment. It is escaped
+  before it reaches a Mongo `$regex`; see `escapeRegExp`.
 */
 export const UserFiltersSchema = z.object({
-  search: z.string().trim().max(120).optional().or(z.literal('')),
-  role: z.enum(Object.values(USER_ROLES)).optional().or(z.literal('')),
-  isApproved: z.enum(['true', 'false']).optional().or(z.literal('')),
-  isActive: z.enum(['true', 'false']).optional().or(z.literal('')),
-  skip: z.coerce.number().int().min(0).optional(),
-  take: z.coerce.number().int().min(1).max(100).optional(),
+  role: z.enum(Object.values(USER_ROLE_FILTERS)).catch(FILTER_ALL).default(FILTER_ALL),
+  status: z.enum(Object.values(USER_STATUS_FILTERS)).catch(FILTER_ALL).default(FILTER_ALL),
+  query: z.string().trim().max(120).catch('').default(''),
 });
 
 export type UserFiltersInput = z.input<typeof UserFiltersSchema>;

@@ -6,10 +6,10 @@ communication in one platform, with role-based dashboards for **administrators**
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 
-> **Current state: steps 0–5 of 27 complete.** The toolchain, the design system, the public landing page, the
-> validated environment, the result/error layer, the SEO surface, the whole data model, credential sign-in
-> and the role-scoped dashboard shell are in place. Everything below marked _(from step N)_ describes a
-> convention this project follows but has not reached yet; see
+> **Current state: steps 0–6 of 27 complete.** The toolchain, the design system, the public landing page, the
+> validated environment, the result/error layer, the SEO surface, the whole data model, credential sign-in,
+> the role-scoped dashboard shell and admin staff-account management are in place. Everything below marked
+> _(from step N)_ describes a convention this project follows but has not reached yet; see
 > [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
 
 ---
@@ -138,19 +138,20 @@ For the three variables that **have a default**, a blank value is read as absenc
 
 ## Scripts
 
-| Script                          | Description                                                       |
-| ------------------------------- | ----------------------------------------------------------------- |
-| `npm run dev`                   | Start the dev server                                              |
-| `npm run build`                 | Production build (`output: 'standalone'`)                         |
-| `npm run start`                 | Serve the production build                                        |
-| `npm run lint`                  | ESLint — import order, cspell, canonical classes, Prettier        |
-| `npm run lint:fix`              | ESLint with `--fix`                                               |
-| `npm run format`                | Prettier check                                                    |
-| `npm run format:write`          | Prettier write                                                    |
-| `npm run seed:super-admin`      | Create the super administrator (see below)                        |
-| `npm run verify:data-model`     | Exercise the identity and directory models, then clean up         |
-| `npm run verify:clinical-model` | Exercise the scheduling and clinical models, then clean up        |
-| `npm run verify:auth`           | Exercise the session token and credential refusals, then clean up |
+| Script                          | Description                                                          |
+| ------------------------------- | -------------------------------------------------------------------- |
+| `npm run dev`                   | Start the dev server                                                 |
+| `npm run build`                 | Production build (`output: 'standalone'`)                            |
+| `npm run start`                 | Serve the production build                                           |
+| `npm run lint`                  | ESLint — import order, cspell, canonical classes, Prettier           |
+| `npm run lint:fix`              | ESLint with `--fix`                                                  |
+| `npm run format`                | Prettier check                                                       |
+| `npm run format:write`          | Prettier write                                                       |
+| `npm run seed:super-admin`      | Create the super administrator (see below)                           |
+| `npm run verify:data-model`     | Exercise the identity and directory models, then clean up            |
+| `npm run verify:clinical-model` | Exercise the scheduling and clinical models, then clean up           |
+| `npm run verify:auth`           | Exercise the session token and credential refusals, then clean up    |
+| `npm run verify:users`          | Exercise the staff-account rules against the database, then clean up |
 
 The remaining `verify:*` scripts arrive with the services they exercise. Both of the above write to and delete
 from the database `MONGODB_URI` points at. Every fixture is tagged with a run-scoped suffix and removed in a

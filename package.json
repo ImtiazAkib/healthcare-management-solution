@@ -15,6 +15,7 @@
     "verify:data-model": "tsx --env-file-if-exists=.env.local scripts/verify-data-model.ts",
     "verify:clinical-model": "tsx --env-file-if-exists=.env.local scripts/verify-clinical-model.ts",
     "verify:auth": "tsx --env-file-if-exists=.env.local scripts/verify-auth.ts",
+    "verify:users": "tsx --env-file-if-exists=.env.local scripts/verify-user-service.ts",
     "prepare": "husky"
   },
   "dependencies": {
@@ -28,6 +29,7 @@
     "lucide-react": "1.28.0",
     "mongoose": "9.9.1",
     "next": "16.3.0",
+    "nuqs": "2.9.5",
     "pino": "10.3.1",
     "pino-pretty": "13.1.3",
     "react": "19.2.8",
@@ -35,6 +37,7 @@
     "react-hook-form": "7.84.0",
     "schema-dts": "2.0.0",
     "shadcn": "4.16.1",
+    "sonner": "2.0.7",
     "tailwind-merge": "3.6.0",
     "zod": "4.4.3"
   },
