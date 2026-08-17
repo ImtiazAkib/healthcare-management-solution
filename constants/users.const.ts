@@ -14,6 +14,36 @@ export const ACCOUNT_FIELD_LIMITS = {
   PASSWORD_MAX: 128,
 } as const;
 
+/**
+ * The sentinel a filter select carries when nothing is chosen. A plain string rather than an
+ * empty value, so an unset filter is distinguishable in the URL from a filter set to blank.
+ */
+export const FILTER_ALL = 'all';
+
+/**
+ * What the staff-list role filter offers — the four staff roles, plus "all". The super
+ * administrator and the patient are absent by design: neither is a staff account this screen
+ * manages.
+ */
+export const USER_ROLE_FILTERS = {
+  ALL: FILTER_ALL,
+  ADMIN: 'admin',
+  DOCTOR: 'doctor',
+  NURSE: 'nurse',
+  LAB: 'lab',
+} as const;
+
+/**
+ * The three account states, which partition the list rather than overlapping: an account is
+ * waiting for approval, usable, or switched off — never two at once.
+ */
+export const USER_STATUS_FILTERS = {
+  ALL: FILTER_ALL,
+  PENDING: 'pending',
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+} as const;
+
 export const GENDERS = {
   MALE: 'male',
   FEMALE: 'female',

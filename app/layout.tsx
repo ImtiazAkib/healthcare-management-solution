@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 
 import { Inter, Poppins } from 'next/font/google';
 
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
+
 import { APP_DATA, SEO } from '@/constants';
 import { env } from '@/env/server';
 
@@ -88,7 +90,12 @@ export default function RootLayout({ children }: RootLayoutProps) {
         {/* First in the tab order, before anything else, so it is reachable on the first press of Tab. */}
         <SkipToContent />
 
-        {children}
+        {/*
+          nuqs reads and writes the URL query string, which is how the admin filter bars keep
+          their state shareable and reload-proof. The adapter wraps the whole app so any route
+          may use the hooks; it renders nothing.
+        */}
+        <NuqsAdapter>{children}</NuqsAdapter>
       </body>
     </html>
   );

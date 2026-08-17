@@ -23,4 +23,5 @@ export * from './tech-card';
 export * from './triage-priority';
 export * from './user.dto';
 export * from './user-role';
+export * from './user-status';
 export * from './vitals';
