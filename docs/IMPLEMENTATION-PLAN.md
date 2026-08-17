@@ -35,7 +35,7 @@ in a working state.
 | [4](#step-4)     | Authentication                          | Phase 3        | ✅ Done        |
 | [5](#step-5)     | Dashboard shell & RBAC                  | Phase 3        | ✅ Done        |
 | [6](#step-6)     | Admin — staff accounts                  | Phase 3        | ✅ Done        |
-| [6b](#step-6b)   | Admin — departments & service catalogue | Phase 3        | ⬜ Not started |
+| [6b](#step-6b)   | Admin — departments & service catalogue | Phase 3        | ✅ Done        |
 | [7](#step-7)     | Patient registry & medical record no.   | Phase 3        | ⬜ Not started |
 | [8](#step-8)     | Doctor availability                     | Phase 3        | ⬜ Not started |
 | [9](#step-9)     | Appointments & queue management         | Phase 3–4      | ⬜ Not started |
@@ -1104,10 +1104,70 @@ constants/codes-departments.const.ts · codes-services.const.ts · service.const
 - Deactivating a service never deletes it — an invoice issued last month still has to render the name and
   price it was billed at, so historical invoice lines snapshot both rather than referencing the live record.
 
-**Acceptance.** An administrator creates a department, assigns a head doctor and sees it offered wherever a
-department is chosen; a service is created, priced and deactivated, and the deactivated one no longer appears
-in a picker but still renders on an older record; a price entered as `500.50` is stored and re-rendered
-exactly, with no drift.
+**Acceptance.** ✅ The rules are proven against the real database by two scripts. `npm run verify:departments`
+(**17 checks, all green**, fixtures torn down) drives `DepartmentService`: name and code are each unique with a
+field-level error naming the one that clashed; a named head must resolve to a real doctor whose account is
+active — a non-existent record and a deactivated account are both refused, clearing the head is allowed, and
+the assignable-heads picker offers active doctors only; a department a doctor still sits in cannot be deleted
+(deactivate instead) but a free one can; the status filter and the name/code search narrow correctly.
+`npm run verify:services` (**all green**, fixtures torn down) drives `ServiceItemService` and the money
+handling: `toMinorUnits`/`formatMoney` and the create schema turn `'500.50'` into the integer `50050` and back
+into `'500.50'` with **no floating-point drift**, a non-numeric price is refused, name and code are unique, and
+the category/status/search filters narrow. Build, lint and format are green; the build emits
+`/admin/departments`, `/admin/departments/new`, `/admin/services` and `/admin/services/new` as dynamic (`ƒ`).
+In the browser, signed in as the super administrator, both list pages serve `200`, the sidebar carries the new
+**Departments** and **Service catalogue** entries, and the pages render their headings, add-links, fields and
+copy.
+
+**An adversarial review caught one real defect, now fixed.** A department keeps its head-doctor id after that
+doctor's account is later deactivated (nothing clears the reference, by design — the head may return). Because
+`update()` re-checked the head on **every** edit, and the check requires an active account, an administrator
+correcting only the description of such a department was blocked by a "head doctor is not active" error on a
+field they never touched. The fix validates the head **only when it is actually changing**; an unchanged head
+is left as it stands. `verify:departments` gained a regression check that fails without the fix, and the
+"assigning a **new** deactivated head is refused" check still passes — the validation is skipped only for a
+head that is not moving.
+
+**The same browser note as the shell step applies.** The interactive click-through — create → toast →
+`router.refresh()`, deactivate-then-hidden-from-picker, filter-survives-reload — could not be exercised in this
+run's preview: the in-app pane could not composite (`document.hidden` stayed true), so React deferred revealing
+the `loading.tsx` Suspense boundary, and no external Chrome was connected. The wiring behind it was confirmed
+by reading it (each action is the fixed gate → validate → delegate over the DB-verified service; each screen
+runs mutations through a transition then toasts and `router.refresh()`s) and, for the money round trip and
+every service rule, by the verify scripts above.
+
+**Deviations from the plan, and why.**
+
+- **Departments take error-code feature digit 3 (Scheduling); services take 6 (Billing).** The taxonomy has no
+  "directory" digit, and every one of the nine is semantically allocated. Services are unambiguous — they are
+  the priced catalogue invoices draw on. For departments the choice was ratified rather than assumed: digit 3
+  is the currently-empty digit whose eventual feature (appointments, availability) most directly consumes a
+  department id, so `codes-departments.const.ts` occupies `13xxx/23xxx/33xxx` and later scheduling codes take a
+  separate sub-range under the same digit. No `*_AUTH` groups — `COMMON_AUTH` plus the area gate cover both.
+- **Money is an integer count of minor units, entered in major units for services only.** `constants/app-data.const.ts`
+  gains a `CURRENCY` block (BDT, two minor-unit digits); `lib/utils/money.utils.ts` parses `'500.50' → 50050`
+  and formats back with integer-only arithmetic (no float ever touches a price). The service price field
+  accepts the decimal a person types; the **doctor consultation fee stays as it shipped in step 3b** — whole
+  minor units, rejecting decimals — rather than being retrofitted, so an already-verified schema is left
+  untouched. Two entry conventions in one app, ratified deliberately.
+- **The head references a `Doctor` record, and the picker is empty until doctor records exist.** The step-3a
+  model deliberately points `headDoctor` at a `Doctor`, not a `User` account ("the head of cardiology is a
+  doctor in that capacity"), so the picker lists doctor **records** joined to their account name and filters to
+  active accounts. No screen creates a `Doctor` record yet, so today the picker is empty and the head stays
+  unassigned — which the field allows; the verify script seeds a doctor to prove the assignment and its rules.
+  A head whose account is **later** deactivated still renders on the row as "—" (its name is not in the
+  active-only set) — a cosmetic display gap, since the id is still stored and the reference intact.
+- **A shared `<Feature>Fields` component backs both the create page and the edit dialog** — unlike step 6's
+  users feature, whose create and edit differed (the role was locked on edit) and so shared no field body.
+  Here the two forms edit an identical shape, so one component serves both, typed on the **create** input; the
+  edit dialog holds the row's id outside the form and merges it in at submit, where the Server Action
+  re-validates the whole object against the update schema. No hidden id input, no generics, no cast.
+- **Services have a hard delete with no live reference guard yet.** Nothing references a `ServiceItem` today
+  (invoices will _snapshot_ name and price rather than point at the live row, and diagnostics land later), so
+  `delete()` simply removes. `SERVICES_BUSINESS.CANNOT_DELETE_REFERENCED` is declared ahead of the feature that
+  will raise it — the same "codes arrive with their raiser" convention the registry documents.
+- **Two new pieces of shared kit**: a `textarea` UI primitive (departments and services both take an optional
+  description) and the `CURRENCY` constant. Both are the archetypal second-consumer case, built once here.
 
 ---
 

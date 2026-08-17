@@ -7,4 +7,14 @@ export const APP_DATA = {
   LOGO: {
     IMAGE_ALT: 'CareSync logo',
   },
+  /*
+    One facility in one country, so the app names its currency rather than carrying a table of
+    them. `MINOR_UNIT_DIGITS` is the exponent every money helper works in: money is stored as
+    an integer count of minor units (paisa), and `2` is what turns 50050 back into ৳500.50.
+  */
+  CURRENCY: {
+    CODE: 'BDT',
+    SYMBOL: '৳',
+    MINOR_UNIT_DIGITS: 2,
+  },
 } as const;

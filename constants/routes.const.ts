@@ -33,6 +33,22 @@ export const ROUTES = {
     LABEL: 'Add a staff account',
     HREF: '/admin/users/new',
   },
+  ADMIN_DEPARTMENTS: {
+    LABEL: 'Departments',
+    HREF: '/admin/departments',
+  },
+  ADMIN_DEPARTMENTS_NEW: {
+    LABEL: 'Add a department',
+    HREF: '/admin/departments/new',
+  },
+  ADMIN_SERVICES: {
+    LABEL: 'Service catalogue',
+    HREF: '/admin/services',
+  },
+  ADMIN_SERVICES_NEW: {
+    LABEL: 'Add a service',
+    HREF: '/admin/services/new',
+  },
   DOCTOR: {
     LABEL: 'Doctor',
     HREF: '/doctor',
