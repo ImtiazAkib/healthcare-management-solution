@@ -33,7 +33,7 @@ in a working state.
 | [3a](#step-3a)   | Data model — identity & directory       | Phase 2–3      | ✅ Done        |
 | [3b](#step-3b)   | Data model — clinical & scheduling      | Phase 2–3      | ✅ Done        |
 | [4](#step-4)     | Authentication                          | Phase 3        | ✅ Done        |
-| [5](#step-5)     | Dashboard shell & RBAC                  | Phase 3        | ⬜ Not started |
+| [5](#step-5)     | Dashboard shell & RBAC                  | Phase 3        | ✅ Done        |
 | [6](#step-6)     | Admin — staff accounts                  | Phase 3        | ⬜ Not started |
 | [6b](#step-6b)   | Admin — departments & service catalogue | Phase 3        | ⬜ Not started |
 | [7](#step-7)     | Patient registry & medical record no.   | Phase 3        | ⬜ Not started |
@@ -882,7 +882,7 @@ projection (the four unselected fields are never read); and `/unauthorized` answ
 
 <a id="step-5"></a>
 
-### Step 5 — Dashboard shell & RBAC
+### Step 5 — Dashboard shell & RBAC ✅ Done
 
 **Goal.** One shell, five role areas, and the access rules that decide who sees which.
 
@@ -919,10 +919,62 @@ lib/utils/role.utils.ts     resolveRoleLabel · ROLE_HOME
 - Each role area takes its accent from step 0's token set, used for the sidebar active state and the role
   badge — nowhere else. Color is a label here, not decoration.
 
-**Acceptance.** Each of the six roles signs in and lands on its own dashboard; the sidebar shows only that
-role's links; typing another role's URL redirects to `/unauthorized` with a link back to the visitor's own
-home; the shell is usable at 375px with the mobile drawer; keyboard tab order reaches the skip link first and
-the main landmark after it.
+**Acceptance.** ✅ Verified in the browser against one seeded account per role. Signed in as a doctor: the
+shell renders with the sidebar, the role badge in **doctor blue**, the Overview nav entry carrying
+`aria-current="page"`, the breadcrumb reading "Overview", and the account menu naming the account. **Role
+isolation holds** — navigating to `/admin` as the doctor lands on `/unauthorized` ("This area is not yours"),
+which offers the way back to `/doctor`; navigating to `/doctor` renders the doctor home. At 375px the sidebar
+is hidden, the hamburger appears, the drawer opens with the same nav and a backdrop and an `sr-only` title,
+and there is no horizontal scroll. The skip link is first in the tab order and the `<main>` carries
+`id="main-content"` after it. Dark tokens resolve correctly across the shell. No console messages of any
+level. Lint, format and build are green; the build prerenders the shell routes as dynamic (`ƒ`), correct for
+a session-guarded surface.
+
+**A verification note worth keeping.** A `fetch('/admin')` from the doctor's session returned **200 with the
+URL unchanged**, which reads like an authorization failure — and is not. Next serves a Server Component
+`redirect()` to an RSC/`fetch` request as a 200 carrying a redirect _instruction_, not a 3xx that `fetch`
+follows, so `response.url` stays `/admin`. The real browser **navigation** redirects to `/unauthorized`
+correctly. **`fetch` is not a trustworthy probe for a server redirect; only a navigation is.** This is the
+same lesson the stale-console note keeps teaching in a different costume: verify the thing the user actually
+does.
+
+**Deviations from the plan, and why.**
+
+- **The nav model bakes its labels in rather than taking a `labels` prop.** The reference threads translated
+  strings down because of i18n; here the nav is the archetypal second-consumer case — the sidebar, the
+  breadcrumb and the mobile drawer all read it — so under this project's rule the copy moves to
+  `lib/utils/navigation.utils.ts` beside the structural data. `resolveNavModel(role)` returns the sections
+  directly.
+- **Every role's model currently holds only its Overview entry.** `typedRoutes` refuses a `<Link>` to a route
+  that does not exist, and the sub-pages do not exist yet — so `NavItem.href` is typed `Route`, not `string`,
+  and each entry appends to the model in the step that builds the route it points at. The sidebar is sparse
+  today and correct; it is not faked full with dead links.
+- **No theme selector and no language selector in the topbar.** The theme toggle is [step 21b](#step-21b);
+  there is no language to select. The topbar's right side is the account menu alone, and its labels are
+  literal because it has one caller.
+- **`RoleAreaPlaceholder` was deleted and replaced by `RoleHome`.** The step-4 placeholder announced that the
+  shell was coming; now it is here. `RoleHome` renders inside the shell — a `PageHeader` welcome, the area's
+  purpose, and the capabilities each later step will turn into a real screen. **Deliberately not a wall of
+  stat tiles:** numbers with no data behind them are the vanity surface the design brief warns against, so
+  there are none until there is something real to count.
+- **Role accent is the badge colour, not the active-nav background.** The plan said "sidebar active state and
+  the role badge". The five accents were contrast-verified as _text on card_; the active nav uses the
+  `sidebar-accent` token pair verified for _that_ job. Tinting the active background per role would need five
+  more contrast checks for a weaker result, so the accent marks the role badge (in the sidebar block, the
+  drawer block and the account menu) and the nav keeps its verified pair. Colour is still a label, just a more
+  legible one.
+- **`dashboard-stat.ts` and `dashboard-title-sync.tsx` were not built.** The stat tile has no honest data to
+  show until a real dashboard needs it; the title-sync fixes a tab flicker that only appears with many
+  client-navigated sub-routes, of which there are none yet. Both arrive with the first screen that needs
+  them, rather than shipping unused now.
+- **`lib/auth/admin-area.gate.ts` was built here as planned**, ahead of its first caller. [Step 6](#step-6)'s
+  actions need `gateAdminArea`, and building it with the shell keeps the auth surface in one place.
+- **`role.utils.ts` holds `resolveRoleLabel` and `roleAccentClassName`**, not `ROLE_HOME` — that lives in
+  `routes.const.ts` where the routes are, and duplicating it here would be a second source of the same truth.
+- **Five UI primitives landed** — `avatar`, `dropdown-menu`, `breadcrumb`, `page-header`, `empty-state`,
+  `skeleton` — on top of step 4's set. The dropdown-menu is fuller than the account menu strictly needs,
+  because [step 6](#step-6)'s table row actions use the same primitive; building it once now is cheaper than
+  twice.
 
 ---
 
