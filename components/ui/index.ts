@@ -1,6 +1,8 @@
 export * from './avatar';
+export * from './badge';
 export * from './breadcrumb';
 export * from './button';
+export * from './dialog';
 export * from './dropdown-menu';
 export * from './empty-state';
 export * from './form-message';
@@ -8,5 +10,7 @@ export * from './input';
 export * from './label';
 export * from './page-header';
 export * from './password-input';
+export * from './select';
 export * from './skeleton';
 export * from './spinner';
+export * from './table';

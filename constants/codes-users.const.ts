@@ -71,6 +71,18 @@ export const USERS_BUSINESS = {
     create is `admin` — anything else is somebody else's to make.
   */
   SUPER_ADMIN_CREATES_ADMINS_ONLY: createErrorDefinition(31004, 'The super administrator can only create administrator accounts.'),
+  /*
+    A patient account is not a staff account. It arrives through the patient registry with a
+    medical record number attached (step 7), not through the staff-account screen — so this
+    screen refuses the role rather than creating a patient with no record behind them.
+  */
+  CANNOT_CREATE_PATIENT_HERE: createErrorDefinition(31005, 'Patient accounts are created in the patient registry, not here.'),
+  /*
+    Deleting an account that owns a clinical record — a doctor with a professional record, a
+    patient with a medical record — would orphan that record. Deactivate the account instead;
+    it keeps the history intact and refuses the next sign-in.
+  */
+  ACCOUNT_HAS_CLINICAL_RECORD: createErrorDefinition(31006, 'This account has a clinical record and cannot be deleted. Deactivate it instead.'),
 } as const;
 
 /**

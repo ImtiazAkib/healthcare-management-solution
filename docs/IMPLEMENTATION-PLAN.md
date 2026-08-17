@@ -34,7 +34,7 @@ in a working state.
 | [3b](#step-3b)   | Data model — clinical & scheduling      | Phase 2–3      | ✅ Done        |
 | [4](#step-4)     | Authentication                          | Phase 3        | ✅ Done        |
 | [5](#step-5)     | Dashboard shell & RBAC                  | Phase 3        | ✅ Done        |
-| [6](#step-6)     | Admin — staff accounts                  | Phase 3        | ⬜ Not started |
+| [6](#step-6)     | Admin — staff accounts                  | Phase 3        | ✅ Done        |
 | [6b](#step-6b)   | Admin — departments & service catalogue | Phase 3        | ⬜ Not started |
 | [7](#step-7)     | Patient registry & medical record no.   | Phase 3        | ⬜ Not started |
 | [8](#step-8)     | Doctor availability                     | Phase 3        | ⬜ Not started |
@@ -1016,10 +1016,58 @@ constants/codes-users.const.ts    extended
 - The super administrator is invisible to this screen — it cannot be listed, edited, demoted or deleted.
 - Adds `nuqs`, `react-hook-form`, `@hookform/resolvers`, `sonner`.
 
-**Acceptance.** An administrator creates a doctor, a nurse and a lab account and each signs in; editing a name
-updates the row without a full page load; deactivating an account refuses its next sign-in; the filter bar
-survives a reload because it lives in the URL; a duplicate email is refused with a field-level message rather
-than a stack trace; the super administrator appears nowhere in the list.
+**Acceptance.** ✅ The rules — which are the substance of the step — are proven end-to-end against the real
+database by `scripts/verify-user-service.ts` (`npm run verify:users`, **26 checks, all green, fixtures torn
+down**). It drives `UserService` directly, because a Server Action is a public endpoint and the screen that
+hid a button proves nothing about the caller: the super administrator creates an administrator and _only_ an
+administrator; an ordinary administrator creates a doctor and a nurse but is refused the `admin` role and
+refused editing or deactivating another administrator; a patient cannot be created here; a second super
+administrator cannot be created and the seeded one cannot be edited, demoted or deleted; nobody changes their
+own approval, activation or existence; the five-administrator ceiling refuses the sixth; a duplicate email —
+on create and on edit — is refused with a **field-level** `email` error, not a stack trace; deleting an
+account that owns a clinical record is refused (deactivate instead); and the list excludes the super
+administrator while the role filter and the name search narrow correctly. Build, lint and format are green;
+the build emits `/admin/users` and `/admin/users/new` as dynamic (`ƒ`). In the browser, signed in as the
+super administrator, the shell renders, the sidebar carries the new **Administration → Staff accounts** entry,
+and both pages are served (`200`) with the correct DOM — the list empty of the super administrator, the
+create form's role locked to **Administrator** (the only role the super administrator may create).
+
+**A verification note worth keeping.** The interactive click-through — submit → toast → `router.refresh()`,
+filter-survives-reload, deactivate-then-refused-at-sign-in — **could not be exercised in this run's preview**.
+The in-app browser pane could not composite (the tab stayed `document.hidden`), and React 16/19 streaming
+**defers revealing a `loading.tsx` Suspense boundary while the document is hidden** — so the page under
+`admin/users/loading.tsx` sat on its skeleton with the real, correct markup parked in React's `<div hidden>`,
+while a sibling route with no such boundary (`/admin`) rendered fully. No external Chrome was connected to
+fall back to. The wiring behind that click-through was instead confirmed by reading it: each action is the
+fixed **gate → validate → delegate** wrapper over the DB-verified service, and `UsersScreen` runs every
+mutation through a transition, checks `isSuccess`, then toasts and calls `router.refresh()` — the same pattern
+step 4's sign-in form was verified on. The lesson is the shell's own, in a new costume: the preview is a tool,
+not the truth, and when it cannot show the thing the user does, verify the thing itself.
+
+**Deviations from the plan, and why.**
+
+- **`user-role.fields.tsx` was not built.** The plan listed it as a shared role-field component; in practice
+  the role control appears in exactly one place — the create form, where the super administrator sees it
+  locked to `Administrator` and an administrator picks doctor/nurse/lab. The edit dialog shows the role as
+  read-only text because the role never moves on an edit. One consumer, so the field stays inline under this
+  project's second-consumer rule rather than becoming a premature abstraction.
+- **`UserService` is typed against the schema's _output_, not a hand-written filter type.** `list()` and
+  `buildConditions()` take `UserFiltersOutput` (the zod-inferred `{ role, status, query }` with `'all'` in the
+  unions), so the `!== 'all'` narrowing hands Mongo a real `UserRole` with no cast. `types/user-filters.ts`
+  was deleted as a second, weaker source of the same shape.
+- **`update()` writes only name, email and phone.** The staff form does not collect gender or date of birth,
+  and passing them through the shared `toUpdateDocument` would `$unset` them on every save (the schema returns
+  `undefined` for a field the form never rendered). A patient's demographics belong to the registry in
+  [step 7](#step-7), which owns those fields.
+- **The super administrator is excluded at the query, not filtered after.** `buildConditions` seeds
+  `role: { $ne: SUPER_ADMIN }`, so the seeded account is absent from the list _and_ from any count the screen
+  might show — invisible by construction rather than by a post-filter that a later `count()` could forget.
+- **Two error codes were added** — `CANNOT_CREATE_PATIENT_HERE` (31005) and `ACCOUNT_HAS_CLINICAL_RECORD`
+  (31006) — because both refusals are business rules a caller must be told apart, and in this no-i18n app the
+  code's English `MESSAGE` is the sentence the user reads.
+- **Four UI primitives landed** — `table`, `badge`, `dialog`, `select` — on top of the earlier sets, and the
+  root layout gained `<NuqsAdapter>` while the dashboard layout mounted `<Toaster />`. The dialog carries a
+  literal `"Close"` label rather than a translation provider, and `sonner` is themed `system`.
 
 ---
 

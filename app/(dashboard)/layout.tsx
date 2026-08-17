@@ -6,6 +6,7 @@ import { requireSession } from '@/lib/auth';
 import { resolveInitials, resolveRoleLabel, roleAccentClassName } from '@/lib/utils';
 
 import { DashboardSidebar, DashboardTopbar } from '@/components/dashboard';
+import { Toaster } from '@/components/shared';
 
 type DashboardLayoutProps = {
   children: React.ReactNode;
@@ -51,6 +52,9 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
           {children}
         </main>
       </div>
+
+      {/* Mounted once for the whole dashboard, so an action can confirm itself from anywhere underneath. */}
+      <Toaster />
     </div>
   );
 }
