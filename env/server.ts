@@ -6,19 +6,23 @@ import { z } from 'zod';
   variable fails the build instead of surfacing as a runtime error on some request nobody
   made yet.
 
-  `AUTH_SECRET` is still optional: nothing signs a session until authentication lands in
-  step 4, and it becomes required there. `MONGODB_URI` became required with the data model —
-  a clean clone now needs a reachable database before it will build.
+  Both `MONGODB_URI` and `AUTH_SECRET` are required now: the data model reads one and
+  authentication signs with the other. A clean clone needs a reachable database and a secret
+  before it will build.
 */
 
 /*
-  An unset variable and one that is present but empty mean the same thing.
+  For a variable that has a default, an unset one and one that is present but empty mean the
+  same thing: use the default.
 
-  This is not a nicety. `.env.example` ships the optional keys blank, so copying it — the
-  documented first step — hands every one of them an empty string. Without this, `min(1)`
-  refuses all of them, and once `proxy.ts` imports this module in step 4 the failure lands
-  in the middleware: every route in the application returns a 500, on a clean clone, before
-  anybody has typed anything wrong.
+  This is not a nicety. Somebody who blanks a line in `.env.local` rather than deleting it
+  hands zod an empty string, and `.default()` only applies to `undefined` — so `z.url()`
+  would refuse `''` and the build would fail on a variable that has a perfectly good default
+  sitting right there.
+
+  It is applied only to the defaulted variables. A blank `MONGODB_URI` or `AUTH_SECRET`
+  **should** fail: those have no safe default, and quietly reading a blank as absent would
+  turn a missing secret into a confusing error somewhere further down.
 
   @param schema - The schema to apply once a real value is present.
 
@@ -28,25 +32,24 @@ function blankAsAbsent<T extends z.ZodType>(schema: T) {
   return z.preprocess(value => (value === '' ? undefined : value), schema);
 }
 
-/** An optional string that tolerates the blank line `.env.example` ships. */
-const optionalText = blankAsAbsent(z.string().min(1).optional());
-
 export const env = createEnv({
   server: {
     // Logging
-    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+    LOG_LEVEL: blankAsAbsent(z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info')),
 
     // App
-    APP_BASE_URL: z.url().default('http://localhost:3000'),
+    APP_BASE_URL: blankAsAbsent(z.url().default('http://localhost:3000')),
 
     /*
       Indexing switch. Defaults to off so a staging deploy cannot be indexed by forgetting a
       variable — production has to turn it on deliberately.
     */
-    ROBOTS_ENABLED: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform(value => value === 'true'),
+    ROBOTS_ENABLED: blankAsAbsent(
+      z
+        .enum(['true', 'false'])
+        .default('false')
+        .transform(value => value === 'true')
+    ),
 
     /*
       Required from here on: the data model landed, and every service reads it. The database
@@ -57,11 +60,11 @@ export const env = createEnv({
     MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
 
     /*
-      Signs the session token from step 4. Becomes `min(32)` and required there — a missing
-      or short secret means a session can be forged, so it will fail the build rather than
-      degrade quietly.
+      Signs the session token. Required — a missing or short secret means a session can be
+      forged, so it fails the build rather than degrading quietly. Generate one with
+      `openssl rand -base64 32`.
     */
-    AUTH_SECRET: optionalText,
+    AUTH_SECRET: z.string().min(32, 'AUTH_SECRET must be at least 32 characters'),
   },
   experimental__runtimeEnv: process.env,
 });

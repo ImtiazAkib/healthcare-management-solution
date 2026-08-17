@@ -3,6 +3,7 @@ export * from './database.const';
 export * from './datetime.const';
 export * from './routes.const';
 export * from './a11y.const';
+export * from './auth.const';
 export * from './rate-limit.const';
 export * from './roles.const';
 export * from './users.const';

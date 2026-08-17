@@ -1,5 +1,7 @@
 export * from './object-id.schema';
+export * from './sign-in.schema';
 export * from './user-fields.schema';
+export * from './password-change.schema';
 export * from './user-create.schema';
 export * from './user-update.schema';
 export * from './user-filters.schema';
