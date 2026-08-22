@@ -6,6 +6,7 @@
   touch server-only or heavy modules — mongoose above all — import them with `import type`,
   which the compiler erases.
 */
+export * from './appointment.utils';
 export * from './auth.utils';
 export * from './availability.utils';
 export * from './class-name.utils';

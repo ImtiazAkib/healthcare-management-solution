@@ -17,11 +17,12 @@ const log = createLoggerWithContext('doctor.service');
 const DATABASE = CODES.DATABASE.COMMON;
 const VALIDATION = CODES.VALIDATION.COMMON;
 
-/** A doctor projected for a picker — the account name, not the whole record. */
+/** A doctor projected for a picker — the account name and department, not the whole record. */
 export type DoctorOption = {
   doctorId: string;
   name: string;
   specialization: string;
+  departmentId: string;
 };
 
 /*
@@ -43,7 +44,9 @@ export class DoctorService {
     try {
       await connectToDatabase();
 
-      const doctors = await Doctor.find().select('_id user specialization').lean<Pick<DoctorEntity, '_id' | 'user' | 'specialization'>[]>();
+      const doctors = await Doctor.find()
+        .select('_id user specialization department')
+        .lean<Pick<DoctorEntity, '_id' | 'user' | 'specialization' | 'department'>[]>();
 
       if (doctors.length === 0) {
         return listSuccess([]);
@@ -59,7 +62,7 @@ export class DoctorService {
         const name = nameByUserId.get(toId(doctor.user));
 
         if (name) {
-          options.push({ doctorId: toId(doctor._id), name, specialization: doctor.specialization });
+          options.push({ doctorId: toId(doctor._id), name, specialization: doctor.specialization, departmentId: toId(doctor.department) });
         }
       }
 
