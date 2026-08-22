@@ -6,3 +6,5 @@ export * from './patient.service';
 export * from './record-number.issuer';
 export * from './doctor.service';
 export * from './availability.service';
+export * from './appointment.service';
+export * from './queue.service';

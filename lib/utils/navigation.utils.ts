@@ -1,6 +1,6 @@
 import type { Route } from 'next';
 
-import { Building2, CalendarClock, ClipboardList, HeartPulse, LayoutDashboard, UsersRound } from 'lucide-react';
+import { Building2, CalendarCheck, CalendarClock, ClipboardList, HeartPulse, LayoutDashboard, ListOrdered, UsersRound } from 'lucide-react';
 
 import { ADMIN_AREA_ROLES, USER_ROLES } from '@/constants/roles.const';
 import { ROLE_HOME, ROUTES } from '@/constants/routes.const';
@@ -43,13 +43,20 @@ export function resolveNavModel(role: UserRole): NavSection[] {
     administration.push({ href: ROUTES.ADMIN_PATIENTS.HREF, icon: HeartPulse, label: 'Patients' });
     administration.push({ href: ROUTES.ADMIN_DEPARTMENTS.HREF, icon: Building2, label: 'Departments' });
     administration.push({ href: ROUTES.ADMIN_AVAILABILITY.HREF, icon: CalendarClock, label: 'Availability' });
+    administration.push({ href: ROUTES.ADMIN_APPOINTMENTS.HREF, icon: CalendarCheck, label: 'Appointments' });
     administration.push({ href: ROUTES.ADMIN_SERVICES.HREF, icon: ClipboardList, label: 'Service catalogue' });
   }
 
-  // A doctor's own tools. Their sitting hours are published by an administrator; here they read them.
+  // A doctor's own tools, and a nurse's — the schedule an administrator publishes, and the live queue.
   const clinical: NavItem[] = [];
   if (role === USER_ROLES.DOCTOR) {
     clinical.push({ href: ROUTES.DOCTOR_AVAILABILITY.HREF, icon: CalendarClock, label: 'My availability' });
+    clinical.push({ href: ROUTES.DOCTOR_APPOINTMENTS.HREF, icon: CalendarCheck, label: 'Appointments' });
+    clinical.push({ href: ROUTES.DOCTOR_QUEUE.HREF, icon: ListOrdered, label: 'Queue' });
+  }
+
+  if (role === USER_ROLES.NURSE) {
+    clinical.push({ href: ROUTES.NURSE_QUEUE.HREF, icon: ListOrdered, label: 'Queue' });
   }
 
   const sections: NavSection[] = [

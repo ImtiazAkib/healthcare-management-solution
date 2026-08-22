@@ -23,6 +23,7 @@ export * from './availability-update.schema';
 export * from './availability-filters.schema';
 export * from './appointment-create.schema';
 export * from './appointment-reschedule.schema';
+export * from './appointment-filters.schema';
 export * from './vitals-record.schema';
 export * from './encounter-create.schema';
 export * from './prescription-create.schema';
