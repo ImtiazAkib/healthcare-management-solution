@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { objectIdField } from './object-id.schema';
-import { patientFields } from './patient-create.schema';
+import { optionalEmergencyContact, patientFields } from './patient-create.schema';
 
 /*
   No `userId` and no `medicalRecordNo`. Both are settled when the record is created: moving
@@ -10,10 +10,15 @@ import { patientFields } from './patient-create.schema';
 */
 export const PatientUpdateSchema = z.object({
   patientId: objectIdField,
-  bloodGroup: patientFields.bloodGroup.optional(),
+  // An empty-string "unknown" option maps to undefined, so the optional enum accepts "none". A
+  // transform keeps the input a real string union (a preprocess would make it `unknown`).
+  bloodGroup: patientFields.bloodGroup
+    .optional()
+    .or(z.literal(''))
+    .transform(value => (value === '' ? undefined : value)),
   allergies: patientFields.clinicalEntries.optional(),
   chronicConditions: patientFields.clinicalEntries.optional(),
-  emergencyContact: patientFields.emergencyContact.optional(),
+  emergencyContact: optionalEmergencyContact,
   address: patientFields.address.optional().or(z.literal('')),
 });
 

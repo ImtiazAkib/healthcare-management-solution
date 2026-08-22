@@ -19,6 +19,7 @@ export * from './seo.const';
 export * from './json-ld.const';
 export * from './codes-common.const';
 export * from './codes-users.const';
+export * from './codes-patients.const';
 export * from './codes-departments.const';
 export * from './codes-services.const';
 export * from './codes.const';

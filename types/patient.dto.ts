@@ -74,6 +74,40 @@ export function patientFromEntity(entity: PatientEntity): PatientDto {
 }
 
 /**
+ * The whole patient record as the detail page shows it: the full clinical DTO plus the
+ * demographics that live on the account. Assembled from both documents rather than populated,
+ * for the same reason as the summary — a caller that forgot the account gets a type error, not
+ * a name that is silently an id.
+ */
+export type PatientDetailDto = PatientDto & {
+  name: string;
+  email: string;
+  phone?: string | null;
+  gender?: Gender | null;
+  /** ISO date. The page turns it into an age with `calculateAge`, never re-formatting it here. */
+  dateOfBirth?: string | null;
+};
+
+/**
+ * Map a patient and their account to the full detail view.
+ *
+ * @param entity - Stored patient.
+ * @param user - The account the patient record belongs to.
+ *
+ * @returns Instance of PatientDetailDto.
+ */
+export function patientDetailFromEntities(entity: PatientEntity, user: UserEntity): PatientDetailDto {
+  return {
+    ...patientFromEntity(entity),
+    name: user.name,
+    email: user.email,
+    phone: user.phone ?? null,
+    gender: user.gender ?? null,
+    dateOfBirth: user.dateOfBirth ? user.dateOfBirth.toISOString() : null,
+  };
+}
+
+/**
  * Map a patient and their account to the list-safe summary.
  *
  * Both entities are taken explicitly rather than reading a populated `user` off the
