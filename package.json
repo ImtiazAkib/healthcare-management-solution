@@ -20,6 +20,7 @@
     "verify:services": "tsx --env-file-if-exists=.env.local scripts/verify-service-item-service.ts",
     "verify:patients": "tsx --env-file-if-exists=.env.local scripts/verify-patient-service.ts",
     "verify:availability": "tsx --env-file-if-exists=.env.local scripts/verify-availability-service.ts",
+    "verify:appointments": "tsx --env-file-if-exists=.env.local scripts/verify-appointment-service.ts",
     "prepare": "husky"
   },
   "dependencies": {

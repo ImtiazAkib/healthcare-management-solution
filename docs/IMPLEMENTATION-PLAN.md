@@ -38,7 +38,7 @@ in a working state.
 | [6b](#step-6b)   | Admin — departments & service catalogue | Phase 3        | ✅ Done        |
 | [7](#step-7)     | Patient registry & medical record no.   | Phase 3        | ✅ Done        |
 | [8](#step-8)     | Doctor availability                     | Phase 3        | ✅ Done        |
-| [9](#step-9)     | Appointments & queue management         | Phase 3–4      | ⬜ Not started |
+| [9](#step-9)     | Appointments & queue management         | Phase 3–4      | ✅ Done        |
 | [10](#step-10)   | Encounters & medical records (EMR)      | Phase 4        | ⬜ Not started |
 | [11](#step-11)   | Digital prescriptions                   | Phase 4        | ⬜ Not started |
 | [12](#step-12)   | Diagnostics — lab orders & reports      | Phase 4        | ⬜ Not started |
@@ -1414,10 +1414,61 @@ COMPLETED`, with `CANCELLED` reachable before check-in and `NO_SHOW` only after 
   after a mutation.
 - Patients booking their own appointments arrives in [step 13](#step-13); this step books at the counter.
 
-**Acceptance.** A booking lands on a real slot and the slot disappears from the picker; two simultaneous
-bookings of one slot produce one appointment and one clear refusal; check-in assigns sequential token numbers
-per doctor per day; the doctor's queue reorders as patients check in and updates without a manual reload;
-cancelling after check-in is refused; an appointment cannot be booked outside the doctor's published hours.
+**Acceptance.** ✅ Proven against the real database by `npm run verify:appointments` (**26 checks, all green**,
+fixtures torn down). A booking lands on a real slot and the slot disappears from the picker; the **department is
+derived from the doctor, not trusted from the request**; a slot outside the published hours is refused. **Two
+simultaneous bookings of one slot produce exactly one appointment and one refusal** — the loser is turned away
+by the partial unique index on `{ doctor, date, startTime }`, not a check a race can beat, and is reported as
+"that slot was just taken" rather than a crash. Check-in assigns **sequential token numbers per doctor per
+day** from an atomic counter; the lifecycle is enforced — a checked-in appointment cannot jump to completed and
+**cannot be cancelled**, a no-show is refused until the slot has passed; the queue is derived and orders an
+emergency ahead of a lower token; a reschedule moves the slot and frees the old one. Build, lint and format are
+green; the build emits `/admin/appointments`(+`/new`), `/doctor/appointments`, `/doctor/queue` and
+`/nurse/queue`. In the browser, signed in as the super administrator, the pages serve `200`, the sidebar
+carries **Appointments** (and, for a doctor, **Appointments** + **Queue**; for a nurse, **Queue**), and the
+booking form renders the patient/doctor pickers, the date, and the slot grid.
+
+**An adversarial review caught four defects — a self-found authorization hole and three from the review — all
+fixed and regression-tested.**
+
+- **The queue actions gated the role but trusted the request's status (self-found, medium).** Each queue
+  action admitted a role, then passed the client's `status` straight to `changeStatus`, so a nurse admitted to
+  `checkInAction` could send `cancelled` and perform an **administrator-only** cancellation, or a doctor's
+  `in-consultation`. Each action now **pins its own status** — the client chooses the appointment, never the
+  move — so the role gate means what it says.
+- **The reschedule picker hid the appointment's own current slot (medium).** The write path excludes the
+  appointment from its own availability check, but the picker's read did not, so the slot it currently holds
+  showed as taken — a dialog with the Save button live and nothing selectable, or "no free slots" on a busy
+  day when the save would in fact succeed. `computeAvailableSlots` now takes an `excludeAppointmentId` that the
+  reschedule picker passes, matching the write. `verify:appointments` asserts the excluded slot shows free.
+- **A doctor's appointment list capped at 100 and dropped today (medium).** It listed every date, and the
+  service's page cap kept the 100 **furthest-future** rows, so a busy doctor opening the page to see today's
+  patients could see none. The page is now bounded to **today** and shows a "showing X of N" note.
+- **A failed queue read rendered as an empty queue (low).** A transient database error and an empty queue
+  both come back empty; the doctor and nurse queue pages now throw a real failure to the error boundary rather
+  than telling a doctor with a full queue that it is empty.
+
+**Deviations from the plan, and why.**
+
+- **Appointments are exercised through seeded doctors** — the same `Doctor`-record dependency [step 6b](#step-6b)
+  and [step 8](#step-8) carry: a booking needs a doctor with published availability, and no doctor-profile
+  creation screen exists yet, so the pickers are populated by seeded records and the whole booking/queue engine
+  is proven that way. `DoctorService.listForSelection` gained a `departmentId` so the booking form has the
+  doctor's department to submit (which the service re-derives and does not trust).
+- **A counter booking starts `confirmed`, and the status is pinned by the action, never the request.** The
+  lifecycle lives in `appointment.utils` (`canTransition`) and is consumed by both the appointments feature
+  (book, reschedule, cancel) and the queue feature (check-in, call-next, complete, no-show), each action gating
+  to the role that owns the move via a new `gateRoles` helper (the sibling of `gateAdminArea` for actions that
+  belong to a role rather than the admin area). `requested` and the confirm move are reserved for step 13's
+  patient self-booking.
+- **The token counter reuses the step-7 `Counter`**, keyed `appointment-token-{doctorId}-{date}`, so two
+  nurses checking two patients in at once are handed two consecutive numbers.
+- **The queue is derived on every read**, never stored, and it is the one screen that **polls** — a five-second
+  `setInterval` calling `router.refresh()`, cleared on unmount, over an `aria-live="polite"` list. Appointment
+  codes take scheduling digit 3, block `x32xx` (departments `x30xx`, availability `x31xx`).
+- **The doctor's appointments page shows today only, the nurse queue picks a doctor.** The doctor page is
+  bounded to today (see the review fix); the nurse queue reads `?doctorId` validated against the doctors on
+  file, falling back to the first — a nurse's queue is always some doctor's queue.
 
 ---
 

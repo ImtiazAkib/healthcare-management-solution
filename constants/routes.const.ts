@@ -65,6 +65,14 @@ export const ROUTES = {
     LABEL: 'Publish availability',
     HREF: '/admin/availability/new',
   },
+  ADMIN_APPOINTMENTS: {
+    LABEL: 'Appointments',
+    HREF: '/admin/appointments',
+  },
+  ADMIN_APPOINTMENTS_NEW: {
+    LABEL: 'Book an appointment',
+    HREF: '/admin/appointments/new',
+  },
   DOCTOR: {
     LABEL: 'Doctor',
     HREF: '/doctor',
@@ -73,9 +81,21 @@ export const ROUTES = {
     LABEL: 'My availability',
     HREF: '/doctor/availability',
   },
+  DOCTOR_APPOINTMENTS: {
+    LABEL: 'Appointments',
+    HREF: '/doctor/appointments',
+  },
+  DOCTOR_QUEUE: {
+    LABEL: 'Queue',
+    HREF: '/doctor/queue',
+  },
   NURSE: {
     LABEL: 'Nurse',
     HREF: '/nurse',
+  },
+  NURSE_QUEUE: {
+    LABEL: 'Queue',
+    HREF: '/nurse/queue',
   },
   LAB: {
     LABEL: 'Diagnostic lab',

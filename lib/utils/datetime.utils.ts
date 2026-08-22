@@ -31,6 +31,7 @@ const shortDateTime = new Intl.DateTimeFormat('en-US', {
   hourCycle: 'h23',
 });
 const weekday = new Intl.DateTimeFormat('en-US', { timeZone: DEFAULT_TIMEZONE, weekday: 'long' });
+const clockTime = new Intl.DateTimeFormat('en-GB', { timeZone: DEFAULT_TIMEZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
 /**
  * The calendar date an instant falls on **in the facility's timezone**, as `YYYY-MM-DD`.
@@ -72,6 +73,22 @@ export function dayOfWeekFor(calendarDate: string): DayOfWeek | null {
   const index = parsed.getUTCDay();
 
   return (Object.keys(DAY_ORDER) as DayOfWeek[]).find(day => DAY_ORDER[day] === index) ?? null;
+}
+
+/**
+ * The wall-clock time an instant reads in the facility's timezone, as `HH:mm`.
+ *
+ * The sibling of {@link toCalendarDate}: that answers "which day", this answers "what time",
+ * both in the facility's zone. Stored slot times are already bare facility `HH:mm`, so this
+ * returns the same shape and the two compare as plain strings — which is how "has this slot
+ * passed" is decided without a `Date` on either side.
+ *
+ * @param value - The instant to read. Defaults to now.
+ *
+ * @returns The time as `HH:mm`.
+ */
+export function toClockTime(value: Date = new Date()): string {
+  return clockTime.format(value);
 }
 
 /**
