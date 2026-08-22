@@ -1,6 +1,19 @@
 import { DayOfWeek } from '@/types';
 
+import { FILTER_ALL } from '@/constants/users.const';
+
 export const DAYS_OF_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const satisfies readonly DayOfWeek[];
+
+/**
+ * An availability block is either live or retired — the same two flags a department or a service
+ * carries. The filter reuses the shared "all" sentinel, alongside the doctor and day filters,
+ * which narrow to a single id or weekday.
+ */
+export const AVAILABILITY_STATUS_FILTERS = {
+  ALL: FILTER_ALL,
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+} as const;
 
 export const DAY_OF_WEEK_LABELS: Record<DayOfWeek, string> = {
   sunday: 'Sunday',

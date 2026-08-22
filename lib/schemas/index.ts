@@ -20,6 +20,7 @@ export * from './patient-register.schema';
 export * from './patient-filters.schema';
 export * from './availability-create.schema';
 export * from './availability-update.schema';
+export * from './availability-filters.schema';
 export * from './appointment-create.schema';
 export * from './appointment-reschedule.schema';
 export * from './vitals-record.schema';

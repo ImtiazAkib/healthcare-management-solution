@@ -1,8 +1,8 @@
 import type { Route } from 'next';
 
-import { Building2, ClipboardList, HeartPulse, LayoutDashboard, UsersRound } from 'lucide-react';
+import { Building2, CalendarClock, ClipboardList, HeartPulse, LayoutDashboard, UsersRound } from 'lucide-react';
 
-import { ADMIN_AREA_ROLES } from '@/constants/roles.const';
+import { ADMIN_AREA_ROLES, USER_ROLES } from '@/constants/roles.const';
 import { ROLE_HOME, ROUTES } from '@/constants/routes.const';
 
 import type { UserRole } from '@/types';
@@ -42,12 +42,20 @@ export function resolveNavModel(role: UserRole): NavSection[] {
     administration.push({ href: ROUTES.ADMIN_USERS.HREF, icon: UsersRound, label: 'Staff accounts' });
     administration.push({ href: ROUTES.ADMIN_PATIENTS.HREF, icon: HeartPulse, label: 'Patients' });
     administration.push({ href: ROUTES.ADMIN_DEPARTMENTS.HREF, icon: Building2, label: 'Departments' });
+    administration.push({ href: ROUTES.ADMIN_AVAILABILITY.HREF, icon: CalendarClock, label: 'Availability' });
     administration.push({ href: ROUTES.ADMIN_SERVICES.HREF, icon: ClipboardList, label: 'Service catalogue' });
+  }
+
+  // A doctor's own tools. Their sitting hours are published by an administrator; here they read them.
+  const clinical: NavItem[] = [];
+  if (role === USER_ROLES.DOCTOR) {
+    clinical.push({ href: ROUTES.DOCTOR_AVAILABILITY.HREF, icon: CalendarClock, label: 'My availability' });
   }
 
   const sections: NavSection[] = [
     { id: 'overview', label: null, items: [{ href: ROLE_HOME[role], icon: LayoutDashboard, label: 'Overview' }] },
     { id: 'administration', label: 'Administration', items: administration },
+    { id: 'clinical', label: null, items: clinical },
   ];
 
   return sections.filter(section => section.items.length > 0);

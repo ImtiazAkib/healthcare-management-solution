@@ -7,6 +7,7 @@
   which the compiler erases.
 */
 export * from './auth.utils';
+export * from './availability.utils';
 export * from './class-name.utils';
 export * from './datetime.utils';
 export * from './error.utils';
