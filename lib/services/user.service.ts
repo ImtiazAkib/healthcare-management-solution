@@ -4,7 +4,7 @@ import { User } from '@/models/user.model';
 import { SessionUser, UserDto, UserRole, userFromEntity } from '@/types';
 
 import { CODES } from '@/constants/codes.const';
-import { ADMIN_LIMIT, USER_ROLES } from '@/constants/roles.const';
+import { ADMIN_LIMIT, STAFF_ROLES, USER_ROLES } from '@/constants/roles.const';
 import { FILTER_ALL, USER_STATUS_FILTERS } from '@/constants/users.const';
 
 import { createLoggerWithContext } from '@/lib/logger';
@@ -381,15 +381,20 @@ export class UserService {
   /**
    * Translate the screen's filters into a Mongo query.
    *
-   * The super administrator is excluded here rather than after the fact, so it is invisible
-   * to every reader of the list and absent from any count.
+   * The list is scoped to **staff roles** at the query, so this screen shows only the accounts it
+   * manages. That excludes the super administrator (seeded, unmanageable) and, just as
+   * deliberately, the **patient** — a patient is registered separately and is not a staff account,
+   * and once the registry started minting `patient` accounts a `$ne: super-admin` filter alone
+   * would have leaked every patient onto this screen, where an administrator could have toggled the
+   * approval or activation a patient's later account claim depends on. Scoping to `STAFF_ROLES`
+   * keeps them out at the source, and out of any count.
    *
    * @param filters - Role, status and search text.
    *
    * @returns Conditions for `User.find()`.
    */
   private buildConditions(filters: UserFiltersOutput): QueryFilter<UserAttributes> {
-    const conditions: QueryFilter<UserAttributes> = { role: { $ne: USER_ROLES.SUPER_ADMIN } };
+    const conditions: QueryFilter<UserAttributes> = { role: { $in: STAFF_ROLES } };
 
     if (filters.role !== FILTER_ALL) {
       conditions.role = filters.role;

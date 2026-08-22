@@ -14,6 +14,7 @@ export * from './llms.utils';
 export * from './money.utils';
 export * from './mongo.utils';
 export * from './navigation.utils';
+export * from './patient.utils';
 export * from './phone.utils';
 export * from './role.utils';
 export * from './url.utils';
