@@ -18,6 +18,7 @@
     "verify:users": "tsx --env-file-if-exists=.env.local scripts/verify-user-service.ts",
     "verify:departments": "tsx --env-file-if-exists=.env.local scripts/verify-department-service.ts",
     "verify:services": "tsx --env-file-if-exists=.env.local scripts/verify-service-item-service.ts",
+    "verify:patients": "tsx --env-file-if-exists=.env.local scripts/verify-patient-service.ts",
     "prepare": "husky"
   },
   "dependencies": {

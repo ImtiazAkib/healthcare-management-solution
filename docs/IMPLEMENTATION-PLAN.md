@@ -36,7 +36,7 @@ in a working state.
 | [5](#step-5)     | Dashboard shell & RBAC                  | Phase 3        | ✅ Done        |
 | [6](#step-6)     | Admin — staff accounts                  | Phase 3        | ✅ Done        |
 | [6b](#step-6b)   | Admin — departments & service catalogue | Phase 3        | ✅ Done        |
-| [7](#step-7)     | Patient registry & medical record no.   | Phase 3        | ⬜ Not started |
+| [7](#step-7)     | Patient registry & medical record no.   | Phase 3        | ✅ Done        |
 | [8](#step-8)     | Doctor availability                     | Phase 3        | ⬜ Not started |
 | [9](#step-9)     | Appointments & queue management         | Phase 3–4      | ⬜ Not started |
 | [10](#step-10)   | Encounters & medical records (EMR)      | Phase 4        | ⬜ Not started |
@@ -1211,10 +1211,69 @@ lib/utils/patient.utils.ts  formatMedicalRecordNo · calculateAge
   record and an empty clinical area that later steps fill.
 - Adds nothing.
 
-**Acceptance.** Reception registers a patient and gets a formatted MRN back; the same MRN is never issued
-twice under two simultaneous registrations; searching by MRN, phone and partial name each find the record;
-the detail page renders the demographic record and the emergency contact; a doctor and a nurse can open a
-patient, and a patient signed into their own account cannot open anybody's.
+**Acceptance.** ✅ Proven against the real database by `npm run verify:patients` (**29 checks, all green**,
+fixtures torn down). Registration mints an account with **no password**, unverified but approved and active,
+alongside a `Patient` record and a well-formed number (`HMS-2026-000417`); the two hang together, and the
+passwordless account is **refused at sign-in** until it is claimed in step 15. **Five simultaneous
+registrations receive five distinct numbers** — the issuer takes each from an atomic `$inc` on a counter
+document, not a `count()` plus an insert, so the race the plan warns about cannot mint a collision. Search
+finds a record by its **number, phone and partial name**, and deliberately **not** by an allergy or a
+condition. A duplicate email is refused on the `email` field. The detail read returns the demographics and the
+full clinical record; a clinical edit changes the record while leaving the name and number untouched, and an
+emergency contact can be cleared. Build, lint and format are green; the build emits `/admin/patients`,
+`/admin/patients/new` and the dynamic `/admin/patients/[patientId]`. In the browser, signed in as the super
+administrator, the pages serve `200`, the sidebar carries the new **Patients** entry, and the registration
+form renders its demographic, clinical and emergency-contact sections.
+
+**An adversarial review caught three real defects, all fixed and regression-tested.**
+
+- **A registered patient leaked onto the step-6 staff screen (medium).** `UserService.buildConditions()`
+  excluded only the super administrator (`role: { $ne: SUPER_ADMIN }`); before this step no `patient` account
+  existed, so nothing exercised it, but the registry now mints them — and every one appeared as a manageable
+  staff row an administrator could deactivate or un-approve, silently breaking the account claim the patient
+  needs in step 15. The staff list is now scoped to `STAFF_ROLES` at the query (`$in`), the constant that was
+  defined for exactly this and had gone unused. `verify:patients` now asserts a registered patient is absent
+  from the staff list.
+- **The registry search truncated at 50 with no signal (medium).** A common surname matching more than the
+  page cap dropped the older matches invisibly — the exact way a second record with a fresh number gets
+  created for someone already registered. `list()` now returns the **total** match count in `resultInfo`, and
+  the screen says "Showing 50 of 60 — narrow your search to see the rest." `verify:patients` asserts the count
+  is reported.
+- **`calculateAge` aged a patient up a day early west of UTC (low).** A date of birth is stored as UTC
+  midnight, and reading the local `getDate()` off that instant lands on the previous day in a negative-offset
+  timezone. It now reads the birthday with `getUTC*`. Regression-tested.
+
+**Deviations from the plan, and why.**
+
+- **Step 7 is the admin-area registry; the doctor/nurse/patient views arrive with their own steps.** The plan
+  puts every patient route under `/admin/patients`, an admin-area location, so registration, search, the
+  detail page and editing are all guarded by `requireAdminArea` (administrator and super administrator). The
+  acceptance's "a doctor and a nurse can open a patient, and a patient cannot open anybody's" is an
+  **access-model** statement the `PatientService` reads are built for — they take a patient id and do not
+  themselves decide who may look, so the doctor workspace (step 10), the nurse workspace (step 14) and the
+  patient portal (step 13) reuse them behind their own guards. Building those cross-role routes now would be
+  those steps' work, not this one's.
+- **Registration uses a dedicated `PatientRegisterSchema`, not `UserCreateSchema` + `PatientCreateSchema`.**
+  The existing `PatientCreateSchema` takes a `userId` — it is the **step-15** path, where a patient
+  self-registers an account first and the clinical record is hung off it. Reception has no account to hang
+  off, and `UserCreateSchema` requires a password a counter patient does not set, so step 7 composes the
+  demographic half of `userFields` (no password, no role) with the clinical fields into one register schema.
+  The MRN **issuer** is shared between the two paths, exactly as the plan requires.
+- **The allergy and condition lists live in component state, not react-hook-form.** RHF's `useFieldArray` is
+  built around arrays of objects; forcing a `string[]` through it fights the types the whole way. The two
+  lists are held in ordinary state by a shared `PatientClinicalEntries` widget and merged into the payload at
+  submit, where the schema drops the blank rows. The emergency contact is a real RHF field whose schema maps
+  an all-blank object to "no contact" (via superRefine-then-transform, so the **input** type stays a real
+  object the form can register), and the blood-group/gender "none" option submits `''` that a transform maps
+  to `undefined`.
+- **`patient-search` was folded into the list's filter bar, not built as a separate component.** The plan
+  listed both; a standalone patient-picker earns its own component when a **second** consumer needs it — the
+  appointment booking flow in step 9 — under this project's second-consumer rule. Today the one consumer is
+  the registry search, which is `patients-filters`.
+- **A `Counter` model and a `record-number.issuer.ts` were added.** The counter is a single document advanced
+  by an atomic `$inc`, keyed by year; the issuer formats `HMS-YYYY-NNNNNN` from it and is the one place a
+  number is minted. `patient.utils.ts` holds `formatMedicalRecordNo` and `calculateAge`. Patients take error
+  codes under feature digit 2 (`12xxx`/`22xxx`).
 
 ---
 

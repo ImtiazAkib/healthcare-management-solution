@@ -16,6 +16,8 @@ export * from './doctor-create.schema';
 export * from './doctor-update.schema';
 export * from './patient-create.schema';
 export * from './patient-update.schema';
+export * from './patient-register.schema';
+export * from './patient-filters.schema';
 export * from './availability-create.schema';
 export * from './availability-update.schema';
 export * from './appointment-create.schema';
