@@ -37,7 +37,7 @@ in a working state.
 | [6](#step-6)     | Admin — staff accounts                  | Phase 3        | ✅ Done        |
 | [6b](#step-6b)   | Admin — departments & service catalogue | Phase 3        | ✅ Done        |
 | [7](#step-7)     | Patient registry & medical record no.   | Phase 3        | ✅ Done        |
-| [8](#step-8)     | Doctor availability                     | Phase 3        | ⬜ Not started |
+| [8](#step-8)     | Doctor availability                     | Phase 3        | ✅ Done        |
 | [9](#step-9)     | Appointments & queue management         | Phase 3–4      | ⬜ Not started |
 | [10](#step-10)   | Encounters & medical records (EMR)      | Phase 4        | ⬜ Not started |
 | [11](#step-11)   | Digital prescriptions                   | Phase 4        | ⬜ Not started |
@@ -1314,10 +1314,59 @@ lib/utils/availability.utils.ts     overlap detection, slot expansion
 - The week view is a per-day agenda rather than a time-of-day grid: empty hour rows waste height and a grid is
   unreadable on a phone, which is where a doctor actually checks this.
 
-**Acceptance.** An administrator publishes a doctor's week; a block that overlaps the same doctor's existing
-block is refused, naming it; a block that puts two doctors in one room at one time is refused, naming both;
-the doctor sees their own week read-only; a block ending before it starts is refused by the schema, not the
-service.
+**Acceptance.** ✅ Proven against the real database by `npm run verify:availability` (**26 checks, all green**,
+fixtures torn down). The two clashes are the substance and are attacked directly: an overlapping block for the
+**same doctor** is refused, its error naming the day and hours it hit; an overlapping block that puts **another
+doctor in the same room** is refused, its error naming the doctor already there. A block starting exactly when
+another ends is **allowed** (the overlap is half-open), the same hours on a different day are allowed, and the
+same room and hours in an **effective window that never ran at once** (last spring vs this autumn) are allowed.
+The clash check excludes the block being edited, so a block can be re-timed without clashing with itself, and a
+reactivation re-runs the check. `expandSlots` turns a 09:00–13:00 block of twenty-minute slots into twelve and
+drops the short tail of one that does not divide evenly; the booking screen in step 9 imports the same
+function. A block ending before it starts is refused by the schema, not the service. Build, lint and format are
+green; the build emits `/admin/availability`, `/admin/availability/new` and `/doctor/availability`. In the
+browser, signed in as the super administrator, the pages serve `200`, the sidebar carries **Availability**, and
+the publish form renders its day, time, slot-length, room and effective-date fields; a doctor with no
+professional record sees a "no doctor profile yet" empty state rather than a failure.
+
+**An adversarial review caught three real defects, all fixed and regression-tested.**
+
+- **A slot longer than its own block was accepted (medium).** Only `start < end` and the effective-date order
+  were checked, so a 09:00–09:30 block with a 60-minute slot passed — and expanded into **zero** bookable
+  slots, unbookable by reception, yet still reserving the doctor and room against a block that genuinely could
+  be booked there. A block must now hold **at least one whole slot**, checked in the create schema, the update
+  schema, and the model's `pre('validate')` backstop (scripts and services write straight to the model). The
+  model already guarded the analogous zero-length case; this closes its sibling. `verify:availability` gained
+  two checks — the schema refusal and the model backstop.
+- **The reactivate toast dropped the second clash reason (low).** A reactivation can hit both clashes at once,
+  the same two-at-once shape the publish and edit forms render in full through `ConflictNotice`; the toast
+  showed only the first. It now joins every reason.
+- **A transient database error on a doctor's own page read as "no profile yet" (low).** A genuinely-missing
+  record and a failed query both come back as an empty result; the page now tells them apart by the code and
+  throws to the error boundary on a real failure, rather than telling a doctor who has a profile that they have
+  none.
+
+**Deviations from the plan, and why.**
+
+- **Availability is exercised through seeded doctors — the picker is empty until `Doctor` records exist.** As
+  with [step 6b](#step-6b)'s head-doctor picker, a `Doctor` professional record has no creation screen yet
+  (step 16's "Profiles" edits an existing record; it does not mint one), so the admin doctor-picker and a
+  doctor's own week are populated by seeded records, which the verify script creates. The whole availability
+  service — the two clashes, the window overlap, slot expansion — is fully proven that way; only the click-path
+  waits on a doctor-profile flow. A small `DoctorService` (`listForSelection`, `findByUser`) was added here for
+  the picker and the doctor's own screen, and step 9's booking will reuse it.
+- **A block that would hold no slot is refused, not merely warned.** The plan named the two clashes and the
+  end-before-start rule; the zero-slot rule is the review's addition, in the same "a block that vanishes into
+  nothing is a data error, not a block" spirit as the model's existing zero-length guard.
+- **Deactivate and reactivate fire straight from a block's menu; only delete asks first.** The plan listed a
+  `slot-delete.dialog` but no shared confirm dialog, so deactivation is a one-click toggle (its refusal, which
+  a reactivation can still hit, surfaces as an error toast) and only the irreversible delete opens a dialog.
+- **Availability codes share feature digit 3 with departments** — departments hold `x30xx`, availability takes
+  `x31xx`, and step 9's appointments will continue from `x32xx`: one scheduling digit, non-overlapping
+  sequences, as [step 6b](#step-6b) reserved.
+- **The week is a per-day agenda, not a time-of-day grid** — every weekday present so an empty day reads as
+  "nothing scheduled" rather than collapsing, each block a card with its hours, room, slot count and effective
+  window. The doctor's own week is the same view, read-only.
 
 ---
 

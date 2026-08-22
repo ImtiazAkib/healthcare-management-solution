@@ -48,3 +48,13 @@ export const DoctorAcceptingSchema = z.object({ doctorId: objectIdField, isAccep
 
 export type DoctorAcceptingInput = z.input<typeof DoctorAcceptingSchema>;
 export type DoctorAcceptingOutput = z.output<typeof DoctorAcceptingSchema>;
+
+export const AvailabilityActivateSchema = z.object({ availabilityId: objectIdField, isActive: z.boolean() });
+
+export type AvailabilityActivateInput = z.input<typeof AvailabilityActivateSchema>;
+export type AvailabilityActivateOutput = z.output<typeof AvailabilityActivateSchema>;
+
+export const AvailabilityDeleteSchema = z.object({ availabilityId: objectIdField });
+
+export type AvailabilityDeleteInput = z.input<typeof AvailabilityDeleteSchema>;
+export type AvailabilityDeleteOutput = z.output<typeof AvailabilityDeleteSchema>;

@@ -21,6 +21,7 @@ export * from './codes-common.const';
 export * from './codes-users.const';
 export * from './codes-patients.const';
 export * from './codes-departments.const';
+export * from './codes-availability.const';
 export * from './codes-services.const';
 export * from './codes.const';
 export * from './home.const';
