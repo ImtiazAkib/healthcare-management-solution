@@ -66,6 +66,20 @@ availabilitySchema.pre('validate', function () {
   if (this.effectiveTo && this.effectiveFrom && this.effectiveTo < this.effectiveFrom) {
     this.invalidate('effectiveTo', 'The block cannot stop applying before it starts.');
   }
+
+  /*
+    A block must hold at least one whole slot. A slot longer than the block expands into zero
+    slots that reception can never book, yet it would still reserve the doctor and room, so it is
+    refused here as well as in the schema, because scripts and services write straight to the model.
+  */
+  if (this.startTime && this.endTime && this.slotMinutes && this.startTime < this.endTime) {
+    const startMinutes = Number(this.startTime.slice(0, 2)) * 60 + Number(this.startTime.slice(3, 5));
+    const endMinutes = Number(this.endTime.slice(0, 2)) * 60 + Number(this.endTime.slice(3, 5));
+
+    if (endMinutes - startMinutes < this.slotMinutes) {
+      this.invalidate('slotMinutes', 'A slot cannot be longer than the block it fills.');
+    }
+  }
 });
 
 // What the week view and the slot picker both ask for.

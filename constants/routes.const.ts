@@ -57,9 +57,21 @@ export const ROUTES = {
     LABEL: 'Register a patient',
     HREF: '/admin/patients/new',
   },
+  ADMIN_AVAILABILITY: {
+    LABEL: 'Availability',
+    HREF: '/admin/availability',
+  },
+  ADMIN_AVAILABILITY_NEW: {
+    LABEL: 'Publish availability',
+    HREF: '/admin/availability/new',
+  },
   DOCTOR: {
     LABEL: 'Doctor',
     HREF: '/doctor',
+  },
+  DOCTOR_AVAILABILITY: {
+    LABEL: 'My availability',
+    HREF: '/doctor/availability',
   },
   NURSE: {
     LABEL: 'Nurse',

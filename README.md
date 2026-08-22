@@ -6,12 +6,12 @@ communication in one platform, with role-based dashboards for **administrators**
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 
-> **Current state: steps 0–7 of 27 complete.** The toolchain, the design system, the public landing page, the
+> **Current state: steps 0–8 of 27 complete.** The toolchain, the design system, the public landing page, the
 > validated environment, the result/error layer, the SEO surface, the whole data model, credential sign-in,
-> the role-scoped dashboard shell, admin staff-account management, the departments and service catalogue, and
-> the patient registry with medical record numbers are in place. Everything below marked _(from step N)_
-> describes a convention this project follows but has not reached yet; see
-> [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
+> the role-scoped dashboard shell, admin staff-account management, the departments and service catalogue, the
+> patient registry with medical record numbers, and doctor availability with conflict detection are in place.
+> Everything below marked _(from step N)_ describes a convention this project follows but has not reached yet;
+> see [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
 
 ---
 
@@ -156,6 +156,7 @@ For the three variables that **have a default**, a blank value is read as absenc
 | `npm run verify:departments`    | Exercise the department rules (head, uniqueness, delete guard), then clean up    |
 | `npm run verify:services`       | Exercise the service catalogue and money handling, then clean up                 |
 | `npm run verify:patients`       | Exercise registration, the atomic record-number issuer and search, then clean up |
+| `npm run verify:availability`   | Exercise the doctor/room clash checks and slot expansion, then clean up          |
 
 The remaining `verify:*` scripts arrive with the services they exercise. Both of the above write to and delete
 from the database `MONGODB_URI` points at. Every fixture is tagged with a run-scoped suffix and removed in a
