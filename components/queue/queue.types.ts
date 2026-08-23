@@ -26,14 +26,14 @@ export type QueueRowProps = {
   role: QueueRole;
   /** True while any action is in flight, so every row's buttons disable together. */
   isWorking: boolean;
-  onStart: (entry: QueueEntry) => void;
-  onComplete: (entry: QueueEntry) => void;
+  onOpenConsultation: (entry: QueueEntry) => void;
 };
 
 /*
-  The buttons for one row, split by where the row sits. A live-queue row is the doctor's to move
-  through consultation; a waiting-room row is the nurse's to admit or write off. The discriminant
-  keeps each context to exactly the callbacks it can fire.
+  The buttons for one row, split by where the row sits. A live-queue row is the doctor's to work —
+  opening the consultation record, or resuming the one already open; a waiting-room row is the
+  nurse's to admit or write off. The discriminant keeps each context to exactly the callbacks it
+  can fire.
 */
 export type QueueActionsProps =
   | {
@@ -41,8 +41,7 @@ export type QueueActionsProps =
       entry: QueueEntry;
       role: QueueRole;
       isWorking: boolean;
-      onStart: (entry: QueueEntry) => void;
-      onComplete: (entry: QueueEntry) => void;
+      onOpenConsultation: (entry: QueueEntry) => void;
     }
   | {
       context: 'waiting';

@@ -39,9 +39,9 @@ in a working state.
 | [7](#step-7)     | Patient registry & medical record no.   | Phase 3        | ✅ Done        |
 | [8](#step-8)     | Doctor availability                     | Phase 3        | ✅ Done        |
 | [9](#step-9)     | Appointments & queue management         | Phase 3–4      | ✅ Done        |
-| [10](#step-10)   | Encounters & medical records (EMR)      | Phase 4        | ⬜ Not started |
-| [11](#step-11)   | Digital prescriptions                   | Phase 4        | ⬜ Not started |
-| [12](#step-12)   | Diagnostics — lab orders & reports      | Phase 4        | ⬜ Not started |
+| [10](#step-10)   | Encounters & medical records (EMR)      | Phase 4        | ✅ Done        |
+| [11](#step-11)   | Digital prescriptions                   | Phase 4        | ✅ Done        |
+| [12](#step-12)   | Diagnostics — lab orders & reports      | Phase 4        | ✅ Done        |
 | [13](#step-13)   | Patient portal                          | Phase 4        | ⬜ Not started |
 | [14](#step-14)   | Nurse workspace — triage & vitals       | Phase 4        | ⬜ Not started |
 | [15](#step-15)   | Accounts — registration & email         | Phase 5        | ⬜ Not started |
@@ -1474,7 +1474,7 @@ fixed and regression-tested.**
 
 <a id="step-10"></a>
 
-### Step 10 — Encounters and medical records (EMR)
+### Step 10 — Encounters and medical records (EMR) ✅ Done
 
 **Goal.** The consultation itself — what the patient came in with, what was found, what was decided — and the
 history that makes the next consultation better than the last.
@@ -1512,16 +1512,31 @@ lib/utils/encounter.utils.ts · vitals.utils.ts
 - Vitals are read-only here; step 14 writes them.
 - A follow-up date set here is what step 18 turns into a reminder.
 
-**Acceptance.** A doctor opens a checked-in appointment, records a complaint, examination, diagnosis and
-notes, and completes it; the appointment and queue update accordingly; the patient's timeline shows the new
-encounter above the old ones; editing a completed encounter is refused and an addendum is offered instead; a
-doctor with no relationship to a patient cannot open their timeline by guessing the URL.
+**Acceptance.** ✅ Verified. `npm run verify:encounters` — **24 checks, all green**, fixtures torn down —
+proves the two rules the screen cannot vouch for: **access is by relationship** (a doctor with no appointment
+or encounter linking them to a patient is refused the encounter, the timeline and the record, even by guessing
+the id), and a completed encounter is **append-only** (an edit is refused and a dated, attributed addendum is
+taken instead). Opening derives the patient and doctor from the appointment and moves it into consultation;
+completing completes the appointment; the timeline shows the new encounter above the old with the writing
+doctor named. `npm run build` compiles and every route serves.
+
+**Deviations.**
+
+- **The queue is the entry point, and completion moved into the record.** Reconciling with
+  [step 9](#step-9): a doctor's "Start consultation" now opens the encounter and navigates into it (moving the
+  appointment into consultation as one act), and "Resume consultation" returns to an open record. The visit is
+  **completed inside the encounter**, which retired the queue's own completion control — so a completed
+  appointment can never strand an open record — and the queue's `start`/`complete` status actions were dropped.
+- **Ordered for retry-safety.** `open` and `complete` do the recoverable appointment move _before_ the
+  irreversible encounter write, so a failed move leaves the record openable rather than a locked encounter
+  stranded against a live appointment.
+- Addendum authors are resolved to names in the record view rather than shown as raw account ids.
 
 ---
 
 <a id="step-11"></a>
 
-### Step 11 — Digital prescriptions
+### Step 11 — Digital prescriptions ✅ Done
 
 **Goal.** A prescription written once, readable by the patient and the pharmacy, and impossible to lose.
 
@@ -1555,15 +1570,26 @@ lib/utils/prescription.utils.ts     dose formatting, duration expansion
 - Once issued, a prescription is immutable. A change is a new prescription that supersedes it, and both stay
   on the timeline.
 
-**Acceptance.** A doctor issues a prescription from an open encounter; it appears on the patient's timeline
-immediately; the print view renders on one page with the header, both identities and every item; editing an
-issued prescription is refused; a prescription cannot be issued against another doctor's encounter.
+**Acceptance.** ✅ Verified. `npm run verify:prescriptions` — **15 checks, all green** — proves a prescription
+is issued only from the doctor's **own open encounter** (patient and doctor derived from it), is **immutable**
+(there is no edit path; the only change is a replacement that supersedes the original, and both stay on the
+record), and that superseding is a single-writer compare-and-set so two concurrent replaces cannot fork two
+live scripts. The print sheet renders on its own page, hiding the dashboard chrome; a doctor guessing another
+patient's prescription id gets a 404, gated by the same relationship check the encounter enforces.
+
+**Deviations.**
+
+- **Issuing and replacing live on the open encounter**, in a Prescriptions panel on the encounter screen,
+  rather than a standalone `new` page — a prescription is written during the visit. The doctor's
+  `/doctor/prescriptions` list and the `[id]` / `[id]/print` pages are read-only.
+- The print sheet uses a `@media print` visibility rule to hide the shared dashboard shell rather than a
+  separate print-only layout, so it needs no route outside the protected area.
 
 ---
 
 <a id="step-12"></a>
 
-### Step 12 — Diagnostics: lab orders and reports
+### Step 12 — Diagnostics: lab orders and reports ✅ Done
 
 **Goal.** A doctor orders tests, the lab performs them and uploads the result, and the result lands on the
 doctor's and the patient's screens without anyone carrying paper.
@@ -1604,13 +1630,30 @@ lib/utils/file-signature.utils.ts · lab.utils.ts
   reaching a patient is the failure this step is designed around.
 - Order status runs `ORDERED → COLLECTED → IN_PROGRESS → REPORTED → RELEASED`, with `CANCELLED` reachable
   before collection.
-- Upload failures compensate: if the record write fails after the bytes land, the bytes are deleted.
-- Adds `sharp` for image handling.
+- Upload failures compensate: if the record write — or the order move that follows it — fails after the bytes
+  land, the row is deleted and then the bytes, so no orphan is left and a retry starts clean.
 
-**Acceptance.** A doctor orders three tests; the lab sees the order, uploads a PDF and releases it; the doctor
-opens it inline and downloads it; a patient sees only their own released reports and gets a 404 — not a 403 —
-for another patient's report id; a renamed `.exe` is refused by the signature check; an unreleased report is
-invisible to the patient; a failed record write leaves no orphaned bytes in GridFS.
+**Acceptance.** ✅ Verified. `npm run verify:lab` — **33 checks, all green**, fixtures and stored files torn
+down — against a real database and GridFS bucket. It proves the file is trusted by its **magic number** (a
+`.pdf` whose bytes are not `%PDF` is refused, as is an empty file), the caller matrix (**the lab always; the
+ordering doctor and the owning patient only once released; everyone else a 404, never a 403**), that the
+storage key never reaches a DTO or the client, and that a failed upload leaves no orphaned bytes or dangling
+row. Release stamps a verifier from the session and moves the order; the work list is ordered by clinical
+urgency (stat before urgent before routine), not by the priority's spelling. `npm run build` compiles all four
+route handlers.
+
+**Deviations.**
+
+- **One `lab.service.ts`** rather than split order/report services, and **one storage driver** (`lib/storage`,
+  `save`/`read`/`remove`/`usage`) with **no background compression** — `sharp` is not added: a diagnostic file
+  is served byte-for-byte, since re-encoding a report would change what a clinician reads.
+- **Routes live under `/api/lab/reports/…`** (`upload`, `[id]`, `[id]/download`, `[id]/view`), not
+  `/api/lab-reports/…`. Ordering is done from the encounter's Lab-orders panel; the lab works its list at
+  `/lab/orders` and the doctor reads theirs at `/doctor/lab-orders`.
+- `CANCELLED` is reachable from `ORDERED`, `COLLECTED` **and** `IN_PROGRESS` (not only before collection), but
+  not once a report is filed. Storage policy lives in `constants/storage.const.ts`, the per-deployment cap in
+  `env.STORAGE_CAP_BYTES`; the download/view responses carry `nosniff` + `Content-Security-Policy: sandbox` +
+  `Cache-Control: private, no-store`.
 
 ---
 

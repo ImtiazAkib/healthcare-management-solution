@@ -65,6 +65,19 @@ export const env = createEnv({
       `openssl rand -base64 32`.
     */
     AUTH_SECRET: z.string().min(32, 'AUTH_SECRET must be at least 32 characters'),
+
+    /*
+      The total the diagnostic-report bucket may hold. Defaulted, because it differs per
+      deployment the way the database does — a generous ceiling for a clone, tuned per
+      environment. The per-file cap and the quota guard are measured against this.
+    */
+    STORAGE_CAP_BYTES: blankAsAbsent(
+      z.coerce
+        .number()
+        .int()
+        .positive()
+        .default(1024 * 1024 * 1024)
+    ),
   },
   experimental__runtimeEnv: process.env,
 });

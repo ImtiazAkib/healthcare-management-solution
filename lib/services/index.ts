@@ -8,3 +8,8 @@ export * from './doctor.service';
 export * from './availability.service';
 export * from './appointment.service';
 export * from './queue.service';
+export * from './encounter.service';
+export * from './medical-record.service';
+export * from './prescription.service';
+export * from './lab.service';
+export * from './storage.guard';

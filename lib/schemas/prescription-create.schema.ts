@@ -44,3 +44,21 @@ export const PrescriptionCreateSchema = z.object({
 
 export type PrescriptionCreateInput = z.input<typeof PrescriptionCreateSchema>;
 export type PrescriptionCreateOutput = z.output<typeof PrescriptionCreateSchema>;
+
+/*
+  Replacing a prescription. It names the prescription to replace and carries the new items —
+  the encounter it belongs to is the original's, resolved server-side, never sent, so a replacement
+  cannot be redirected onto a different record. An issued prescription is never edited in place;
+  this is the only "change" it allows.
+*/
+export const PrescriptionSupersedeSchema = z.object({
+  prescriptionId: objectIdField,
+  items: z
+    .array(prescriptionItem)
+    .min(1, 'Add at least one drug.')
+    .max(PRESCRIPTION_FIELD_LIMITS.ITEMS, 'That is more items than one prescription should carry.'),
+  advice: prescriptionFields.advice.optional().or(z.literal('')),
+});
+
+export type PrescriptionSupersedeInput = z.input<typeof PrescriptionSupersedeSchema>;
+export type PrescriptionSupersedeOutput = z.output<typeof PrescriptionSupersedeSchema>;
