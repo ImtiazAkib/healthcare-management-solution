@@ -13,3 +13,8 @@ export * from './medical-record.service';
 export * from './prescription.service';
 export * from './lab.service';
 export * from './storage.guard';
+export * from './vitals.service';
+export * from './triage.service';
+export * from './patient-portal.service';
+export * from './registration.service';
+export * from './token.hash';

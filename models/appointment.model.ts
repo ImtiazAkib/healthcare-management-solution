@@ -30,6 +30,9 @@ export type AppointmentAttributes = {
   status: AppointmentStatus;
   /** Set by a nurse at triage in step 14. It reorders the queue ahead of token order. */
   triagePriority: TriagePriority;
+  /** Who set the triage priority, and when — provenance parallel to the vitals' recorder. Absent until a nurse triages. */
+  triagedBy?: Types.ObjectId;
+  triagedAt?: Date;
   reason?: string;
   vitals?: {
     systolic?: number;
@@ -90,6 +93,8 @@ const appointmentSchema = new Schema<AppointmentAttributes, AppointmentModel>(
     tokenNo: { type: Number, min: 1 },
     status: { type: String, required: true, enum: Object.values(APPOINTMENT_STATUSES), default: APPOINTMENT_STATUSES.REQUESTED },
     triagePriority: { type: String, required: true, enum: Object.values(TRIAGE_PRIORITIES), default: TRIAGE_PRIORITIES.ROUTINE },
+    triagedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    triagedAt: { type: Date },
     reason: { type: String, trim: true, maxlength: APPOINTMENT_FIELD_LIMITS.REASON },
     vitals: { type: vitalsSchema },
     bookedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },

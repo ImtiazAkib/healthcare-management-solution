@@ -6,14 +6,16 @@ communication in one platform, with role-based dashboards for **administrators**
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 
-> **Current state: steps 0–12 of 27 complete.** The toolchain, the design system, the public landing page, the
+> **Current state: steps 0–15 of 27 complete.** The toolchain, the design system, the public landing page, the
 > validated environment, the result/error layer, the SEO surface, the whole data model, credential sign-in,
 > the role-scoped dashboard shell, admin staff-account management, the departments and service catalogue, the
 > patient registry with medical record numbers, doctor availability with conflict detection, appointment
 > booking with a live queue, the encounter/EMR record with a relationship-gated patient timeline, immutable
-> digital prescriptions with a printable sheet, and diagnostic lab orders and reports with GridFS file
-> upload/download are in place. Everything below marked _(from step N)_ describes a convention this project
-> follows but has not reached yet; see [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
+> digital prescriptions with a printable sheet, diagnostic lab orders and reports with GridFS file
+> upload/download, the session-scoped patient portal with self-booking, the nurse's vitals and triage
+> workspace, and patient self-registration with hashed-token email verification and password reset are in
+> place. Everything below marked _(from step N)_ describes a convention this project follows but has not
+> reached yet; see [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
 
 ---
 
@@ -111,14 +113,16 @@ Open [http://localhost:3000](http://localhost:3000).
 cp .env.example .env.local
 ```
 
-| Variable            | Required                  | Notes                                                                                             |
-| ------------------- | ------------------------- | ------------------------------------------------------------------------------------------------- |
-| `LOG_LEVEL`         | No, defaults `info`       | `fatal` · `error` · `warn` · `info` · `debug` · `trace`                                           |
-| `APP_BASE_URL`      | No, defaults to localhost | Absolute origin — canonical, sitemap and OG URLs use it (step 2)                                  |
-| `ROBOTS_ENABLED`    | No, defaults `false`      | Set `true` on production only; anything else stays out of the index                               |
-| `MONGODB_URI`       | **Yes**                   | Local or Atlas. The database name is set in code, not read from this                              |
-| `AUTH_SECRET`       | **Yes**                   | At least 32 random characters — `openssl rand -base64 32`                                         |
-| `STORAGE_CAP_BYTES` | No, defaults 1 GiB        | Total the GridFS lab-report bucket may hold; the upload quota guard measures against it (step 12) |
+| Variable            | Required                  | Notes                                                                                                 |
+| ------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `LOG_LEVEL`         | No, defaults `info`       | `fatal` · `error` · `warn` · `info` · `debug` · `trace`                                               |
+| `APP_BASE_URL`      | No, defaults to localhost | Absolute origin — canonical, sitemap and OG URLs use it (step 2)                                      |
+| `ROBOTS_ENABLED`    | No, defaults `false`      | Set `true` on production only; anything else stays out of the index                                   |
+| `MONGODB_URI`       | **Yes**                   | Local or Atlas. The database name is set in code, not read from this                                  |
+| `AUTH_SECRET`       | **Yes**                   | At least 32 random characters — `openssl rand -base64 32`                                             |
+| `STORAGE_CAP_BYTES` | No, defaults 1 GiB        | Total the GridFS lab-report bucket may hold; the upload quota guard measures against it (step 12)     |
+| `MAIL_TRANSPORT`    | No, defaults `log`        | `log` writes emails to the logger (walk the whole flow with no server); `smtp` sends them (step 15)   |
+| `SMTP_*`            | Only on `smtp`            | `SMTP_HOST` · `SMTP_PORT` (587) · `SMTP_USER` · `SMTP_PASSWORD` · `SMTP_FROM` — read on the smtp path |
 
 Every variable is declared in [env/server.ts](env/server.ts) and validated with zod. That module is imported
 by [next.config.ts](next.config.ts), so an invalid value **fails the build** rather than surfacing on some
@@ -164,6 +168,9 @@ For the three variables that **have a default**, a blank value is read as absenc
 | `npm run verify:encounters`     | Exercise relationship-gated access and the append-only encounter, then clean up     |
 | `npm run verify:prescriptions`  | Exercise issue-from-open-encounter, immutability and supersede, then clean up       |
 | `npm run verify:lab`            | Exercise the magic-number check, the access matrix and GridFS upload, then clean up |
+| `npm run verify:vitals`         | Exercise the vitals write, the triage reorder of the queue, then clean up           |
+| `npm run verify:portal`         | Exercise the session-scoped reads and cross-owner refusals, then clean up           |
+| `npm run verify:registration`   | Exercise password hashing, single-use tokens and record claiming, then clean up     |
 
 The remaining `verify:*` scripts arrive with the services they exercise. Each writes to and deletes
 from the database `MONGODB_URI` points at (the lab script also writes to and clears its GridFS bucket). Every

@@ -5,6 +5,7 @@ export * from './blood-group';
 export * from './day-of-week';
 export * from './department.dto';
 export * from './doctor.dto';
+export * from './doctor-directory.dto';
 export * from './encounter.dto';
 export * from './encounter-status';
 export * from './feature-card';
