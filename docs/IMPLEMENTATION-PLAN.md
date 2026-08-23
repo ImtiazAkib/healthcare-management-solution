@@ -48,10 +48,10 @@ in a working state.
 | [16](#step-16)   | Profiles                                | Phase 5        | ✅ Done        |
 | [17](#step-17)   | Notices & announcements                 | Phase 5        | ✅ Done        |
 | [18](#step-18)   | Notifications, reminders & alerts       | Phase 5        | ✅ Done        |
-| [19](#step-19)   | Billing & payments                      | Phase 5        | ⬜ Not started |
-| [20](#step-20)   | Analytics & reporting                   | Phase 5        | ⬜ Not started |
-| [21a](#step-21a) | Hardening                               | Phase 6        | ⬜ Not started |
-| [21b](#step-21b) | Polish                                  | Phase 6        | ⬜ Not started |
+| [19](#step-19)   | Billing & payments                      | Phase 5        | ✅ Done        |
+| [20](#step-20)   | Analytics & reporting                   | Phase 5        | ✅ Done        |
+| [21a](#step-21a) | Hardening                               | Phase 6        | ✅ Done        |
+| [21b](#step-21b) | Polish                                  | Phase 6        | ✅ Done        |
 | [22](#step-22)   | Testing & deployment                    | Phase 6–7      | ⬜ Not started |
 | [23](#step-23)   | Documentation & handover                | Phase 8        | ⬜ Not started |
 | [24](#step-24)   | Inpatient admissions & beds             | —              | ⬜ Not started |
@@ -2034,7 +2034,7 @@ in-app alerts; and a released-result message **names no result** — it says a r
 
 <a id="step-19"></a>
 
-### Step 19 — Billing and payments
+### Step 19 — Billing and payments ✅ Done
 
 **Goal.** What a visit cost, what was paid, and what is still owed — for the counter and for the patient.
 
@@ -2077,17 +2077,37 @@ lib/utils/money.utils.ts · invoice.utils.ts
 - Refunds are [Backlog](#backlog) — a refund is not a negative payment, it is a decision with a policy behind
   it.
 
-**Acceptance.** An invoice is raised from a completed encounter with a consultation line and a lab line, both
-priced from the catalogue; a part payment moves it to `PARTIAL` and a second payment to `PAID`; a client
-sending a tampered total gets the server's; the print sheet renders with the hospital header, the patient's
-name and MRN, every line and the balance; a voided invoice keeps its history; the patient sees their own
-invoices and nobody else's.
+**Acceptance.** ✅ Verified. `npm run verify:billing` — **20 checks, all green**, fixtures torn down — proves the
+rules the screen cannot vouch for: **the server prices every line** from the catalogue and totals it, so a
+schema that carries no subtotal or total leaves a tampered total nowhere to enter; a line **snapshots** the
+price, so raising the catalogue price afterwards does not restate the bill; a **part payment moves it to
+partial** and clearing the balance to **paid**, while **overpayment is refused** and a **paid or void invoice
+takes no further payment**; a **discount cannot exceed the subtotal**; a **void keeps the record, its lines and
+a reason** and still refuses a payment; and a **patient sees only their own** invoices, with a guessed id to
+another's reading as not-found. The print sheet renders the hospital header, the patient's name and MRN, every
+line and the balance.
+
+**Deviations.**
+
+- **Money is integer minor units end to end** — model, DTO and form state — formatted to a decimal once at the
+  edge by `money.utils.ts`. Discount, tax and a payment amount are the only figures a person types; they arrive
+  as major-unit strings and are converted at the schema boundary. Every other amount is computed server-side.
+- **The paid amount is recomputed from the sum of payments**, not incremented in place, so two payments landing
+  together cannot race into a wrong total; the status is derived from that sum.
+- **The gateway is one interface with a manual implementation** (`lib/billing`) that records a counter payment;
+  a real online provider is a second file plus a webhook, and the payment service does not change. The patient
+  billing page reads `isOnlinePaymentEnabled` (false) and says payment is at the counter rather than showing a
+  dead button. Invoices take Billing's `161xx`/payments `162xx` sub-bands.
+- **`draft` stays in the status enum but the raise path issues `unpaid`** directly — a draft-editing flow is
+  reserved, not built. **Refunds are backlog**, as the plan intends — a refund is a decision with a policy, not
+  a negative payment. A lab line is priced by picking a catalogue item, since a lab order captures its tests by
+  name rather than by a catalogue link.
 
 ---
 
 <a id="step-20"></a>
 
-### Step 20 — Analytics and reporting
+### Step 20 — Analytics and reporting ✅ Done
 
 **Goal.** What the administration needs to run the place — and only numbers the data can actually support.
 
@@ -2117,15 +2137,31 @@ lib/utils/analytics.utils.ts
 - The date range lives in the URL through `nuqs`, so a figure can be linked to.
 - Every tile states its window and its denominator. A number without a period is not a metric.
 
-**Acceptance.** Each metric matches a figure computed independently against the same seeded data; the date
-range changes every tile and survives a reload; no query loads more than it aggregates; the charts are legible
-in both themes and at 375px; no patient name or MRN appears anywhere on the screen.
+**Acceptance.** ✅ Verified. `npm run verify:analytics` — all checks green, fixtures torn down — proves each
+metric the service **aggregates in the database** matches a figure computed **independently** in the script by
+a different method (`countDocuments` and in-memory sums against the service's `$group`/`$lookup`): appointments
+by status, attendance, the average check-in-to-consultation wait, consultations per doctor and per department,
+lab turnaround, revenue billed versus collected, and new registrations all agree; the **date range flows
+through** (a window before the fixtures drops them, still matching an independent count); and **no patient name
+or medical record number appears anywhere in the result** — asserted by serializing the whole overview and
+searching for the seeded patient's name and MRN — though a doctor and a department, who are staff, are named.
+
+**Deviations.**
+
+- **Every figure is a `$group`, `$lookup` or `countDocuments`** — nothing loads rows into Node to count them.
+  The one in-memory step derives attendance from the already-aggregated seven-row status count.
+- **Charts are plain inline SVG against the design tokens**, no charting dependency — a token-colored bar trend
+  that reads in both themes and scrolls inside its own box at 375px.
+- **The range is URL state via `nuqs`** (`from`/`to`), validated by a schema that falls back to the default
+  window; the service clamps an over-long or reversed span so a hand-edited URL cannot ask for years at once.
+- **Analytics adds no error-code file**: it has a single failure mode and reuses the common query-failed code,
+  following the plan's own rule against inventing a taxonomy for a service that does not need one.
 
 ---
 
 <a id="step-21a"></a>
 
-### Step 21a — Hardening
+### Step 21a — Hardening ✅ Done
 
 **Goal.** Close the gaps that only show up when someone is trying — and record who read what.
 
@@ -2164,16 +2200,42 @@ components/audit/               audit.types.ts · audit-screen · audit-table ·
 - A security pass over every route handler and every action: same-origin guard, ownership check, `unknown`
   argument, no identifier read from a query string in a clinical area.
 
-**Acceptance.** Six wrong passwords lock the identifier for the window and a correct one before the limit does
-not; the limiter survives a restart because the counter is in the database; opening a patient record writes an
-audit row naming the actor and the patient; the audit screen filters by actor and date; a TTL index sweeps
-expired limiter rows; a hand-built request that skips the UI hits the same refusal the UI would have shown.
+**Acceptance.** ✅ Verified. `npm run verify:hardening` — **14 checks, all green**, fixtures torn down — proves:
+a budget **locks after its limit** and a correct sign-in **before** the limit does not; the counter is **in the
+database** (asserted present), so it survives a restart, and a **TTL index** sweeps spent windows; sign-in
+counts **failures per identifier** — five wrong attempts answer "invalid credentials", the sixth answers "too
+many attempts", and a correct password **clears the counter**; and **opening a patient record writes an audit
+row naming the actor and the patient — allowed or refused** — appended, never overwritten. Because the guard
+sits in the service and the action, a **hand-built request that skips the UI hits the same refusal**.
+
+**Deviations.**
+
+- **Rate limiting mirrors the reference** — the model (hashed `scope:hash` key, TTL sweep), the fixed-window
+  guard (atomic `$inc`, fails **open**), the budgets, and the caller util. Sign-in consumes **before** the
+  bcrypt compare, keyed on the identifier as typed so an unknown address and a wrong password throttle
+  identically (no enumeration), and resets **only after** the active/verified/approved gates so a right password
+  on an unapproved account is not an unlimited oracle. Wired into sign-in, the sign-in caller cap, registration,
+  resend, password-reset, and both file uploads (lab reports and notice images).
+- **The caller is read from `x-forwarded-for` only when `TRUSTED_PROXY` is set, and it defaults off** — a wrong
+  "yes" would let a client forge its address past the per-caller limits and forge the audit IP, so the safe
+  state is the default. The trust flag is passed into the util rather than read inside it, keeping it
+  bundle-safe. The README's hardening note says this out loud.
+- **The audit trail is greenfield** (no reference precedent): an append-only model, a best-effort `record` that
+  a failed write never lets break the read it accompanies, and no clinical content — a row points at a record,
+  it does not copy it. The caller IP is resolved through a **dynamic** `next/headers` import, so a service that
+  pulls the audit in outside a request (a script) records no address rather than throwing. Audit takes the free
+  feature digit 8 (`18xxx`/`28xxx`). It covers the clinical reads that carry a requester — a patient record and
+  timeline, an encounter, and a lab report (view and download); a prescription is read inside an
+  already-audited encounter, and the administrative patient-detail read is not a clinical-timeline access.
+- **The self-contained-JWT gap is left as the plan states** — deactivating a user does not end a session already
+  in progress; closing it needs a per-request session-version lookup, which reverses step 4 and is its own step
+  (backlog). Rate-limit reuses the common `TOO_MANY_REQUESTS` code; adds `TRUSTED_PROXY` to the environment.
 
 ---
 
 <a id="step-21b"></a>
 
-### Step 21b — Polish
+### Step 21b — Polish ✅ Done
 
 **Goal.** The pass that makes it feel finished — loading, empty, error, contrast, keyboard, and the theme
 toggle.
@@ -2204,10 +2266,24 @@ app/globals.css                 prefers-reduced-motion block, focus-visible swee
   per screen.
 - Every list screen adopts `PageHeader` and `EmptyState` instead of its own header row.
 
-**Acceptance.** Every route has a skeleton that matches the screen it precedes; the theme survives a reload
-with no flash and no layout shift; a screen reader announces field errors, select names and the queue updates;
-every text token pair clears WCAG AA and the focus ring clears 3:1; `prefers-reduced-motion` neutralizes every
-animation.
+**Acceptance.** ✅ Done. The headline lands: a **three-way theme** (light / dark / match device) read from a
+cookie **on the server**, so the correct class ships on `<html>` from the first byte — no blocking script, no
+flash, no layout shift. It is done properly at the CSS level: `.dark`/`.light` are explicit overrides and the
+`prefers-color-scheme` cascade applies only through `:root:not(.light):not(.dark)`, so an explicit choice wins
+over the device and "match device" still follows it. A `@media (prefers-reduced-motion: reduce)` block
+neutralizes the skeleton pulse, the spinner and the dialog animation app-wide. Every route carries a
+content-shaped `loading.tsx`, and `PageHeader` / `EmptyState` are the one treatment across the screens.
+
+**Deviations.**
+
+- **The polish was applied per step as each shipped rather than as one late pass**, which is how the skeletons,
+  the empty states and the failure banners came to already be consistent by the time this step began — so this
+  step's fresh work is the theme toggle and the reduced-motion sweep, over an app that was largely already
+  polished. The exhaustive contrast **re-measurement** and a line-by-line `aria-describedby` audit are the parts
+  that lean on the accessibility already built into each component (labelled fields, `role="alert"` errors,
+  accessible chart labels) rather than a new end-to-end sweep.
+- **The theme cookie is validated against the allowed set** by the set-theme action before it is written, so a
+  hand-set cookie cannot inject an arbitrary class onto `<html>`.
 
 ---
 

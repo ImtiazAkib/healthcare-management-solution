@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 
 import { CODES, USER_ROLES } from '@/constants';
 
+import { RATE_LIMIT } from '@/constants/rate-limit.const';
 import { STORAGE } from '@/constants/storage.const';
 
 import {
@@ -12,12 +13,13 @@ import {
   withInsufficientStorage,
   withOk,
   withPayloadTooLarge,
+  withTooManyRequests,
   withUnauthorized,
 } from '@/lib/api';
 import { getSessionUser } from '@/lib/auth';
 import { createError, isSuccess } from '@/lib/result';
 import { LabReportCreateSchema } from '@/lib/schemas';
-import { LabService, getStorageStatus } from '@/lib/services';
+import { LabService, consumeRateLimit, getStorageStatus } from '@/lib/services';
 import { mapZodErrorsToErrorDto } from '@/lib/utils';
 
 const labService = new LabService();
@@ -47,6 +49,11 @@ export async function POST(request: NextRequest) {
   // The lab files reports; administration may stand in. Nobody else.
   if (sessionUser.role !== USER_ROLES.LAB && sessionUser.role !== USER_ROLES.ADMIN && sessionUser.role !== USER_ROLES.SUPER_ADMIN) {
     return withForbidden();
+  }
+
+  // Keyed on the account, not the caller — an upload is authenticated, so the session is the fair unit.
+  if (!(await consumeRateLimit('upload', sessionUser.userId, RATE_LIMIT.UPLOAD))) {
+    return withTooManyRequests();
   }
 
   // Refuse an obviously-too-large body from its declared length, before a byte is buffered.

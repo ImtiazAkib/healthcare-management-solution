@@ -1,6 +1,7 @@
 import type { Route } from 'next';
 
 import { NotificationBell } from '@/components/notifications';
+import { ThemeSelector } from '@/components/shared';
 
 import { AccountMenu } from './account-menu';
 import { DashboardBreadcrumb } from './dashboard-breadcrumb';
@@ -17,8 +18,8 @@ type DashboardTopbarProps = {
 
 /*
   One row: on the left the mobile menu button (below `lg`, where the sidebar is hidden) and
-  the location breadcrumb; on the right the account cluster. The theme toggle joins the right
-  side in the polish step; there is no language selector, because there is one language.
+  the location breadcrumb; on the right the theme toggle, the notification bell and the
+  account cluster. There is no language selector, because there is one language.
 
   Its labels are literal here rather than props: the topbar has one caller, the dashboard
   layout, so there is no second consumer to lift them to a shared place for.
@@ -32,6 +33,8 @@ export function DashboardTopbar({ role, user, notifications }: DashboardTopbarPr
         <DashboardBreadcrumb role={role} overviewLabel="Overview" ariaLabel="Breadcrumb" />
 
         <div className="ms-auto flex shrink-0 items-center gap-2">
+          <ThemeSelector />
+
           <NotificationBell notifications={notifications.items} unreadCount={notifications.unreadCount} allHref={notifications.allHref} />
 
           <AccountMenu

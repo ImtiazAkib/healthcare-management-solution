@@ -4,12 +4,21 @@ import type { NextRequest } from 'next/server';
 import { CODES, USER_ROLES } from '@/constants';
 
 import { NOTICE_IMAGE } from '@/constants/notice.const';
+import { RATE_LIMIT } from '@/constants/rate-limit.const';
 
-import { contentLengthExceeds, isSameOriginRequest, withForbidden, withOk, withPayloadTooLarge, withUnauthorized } from '@/lib/api';
+import {
+  contentLengthExceeds,
+  isSameOriginRequest,
+  withForbidden,
+  withOk,
+  withPayloadTooLarge,
+  withTooManyRequests,
+  withUnauthorized,
+} from '@/lib/api';
 import { getSessionUser } from '@/lib/auth';
 import { isSuccess } from '@/lib/result';
 import { NoticeCreateSchema } from '@/lib/schemas';
-import { NoticeService } from '@/lib/services';
+import { NoticeService, consumeRateLimit } from '@/lib/services';
 import { mapZodErrorsToErrorDto } from '@/lib/utils';
 
 const noticeService = new NoticeService();
@@ -44,6 +53,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (!gate.ok) {
     return gate.response;
+  }
+
+  if (!(await consumeRateLimit('upload', gate.sessionUser.userId, RATE_LIMIT.UPLOAD))) {
+    return withTooManyRequests();
   }
 
   if (contentLengthExceeds(request, NOTICE_IMAGE.MAX_SIZE_BYTES)) {

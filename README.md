@@ -6,7 +6,7 @@ communication in one platform, with role-based dashboards for **administrators**
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 
-> **Current state: steps 0–18 of 27 complete.** The toolchain, the design system, the public landing page, the
+> **Current state: steps 0–21 of 27 complete.** The toolchain, the design system, the public landing page, the
 > validated environment, the result/error layer, the SEO surface, the whole data model, credential sign-in,
 > the role-scoped dashboard shell, admin staff-account management, the departments and service catalogue, the
 > patient registry with medical record numbers, doctor availability with conflict detection, appointment
@@ -15,9 +15,11 @@ Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 > upload/download, the session-scoped patient portal with self-booking, the nurse's vitals and triage
 > workspace, patient self-registration with hashed-token email verification and password reset, the shared
 > self-service profile with a proof-gated email change, hospital notices targeted by audience with
-> magic-number-checked images, and record-first notifications with an idempotent reminder sweep are in place.
-> Everything below marked _(from step N)_ describes a convention this project follows but has not reached yet;
-> see [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
+> magic-number-checked images, record-first notifications with an idempotent reminder sweep, invoicing and
+> counter payments with server-computed totals, the analytics dashboard aggregated entirely in the database,
+> database-backed rate limiting with an append-only audit trail of clinical reads, and a flash-free three-way
+> theme are in place. Everything below marked _(from step N)_ describes a convention this project follows but
+> has not reached yet; see [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
 
 ---
 
@@ -127,6 +129,7 @@ cp .env.example .env.local
 | `SMTP_*`            | Only on `smtp`            | `SMTP_HOST` · `SMTP_PORT` (587) · `SMTP_USER` · `SMTP_PASSWORD` · `SMTP_FROM` — read on the smtp path |
 | `SMS_TRANSPORT`     | No, defaults `log`        | `log` writes SMS notifications to the logger; a real provider is one driver away (step 18)            |
 | `SMS_*`             | Only on a real transport  | `SMS_ACCOUNT_SID` · `SMS_AUTH_TOKEN` · `SMS_FROM` — read only when `SMS_TRANSPORT` is not `log`       |
+| `TRUSTED_PROXY`     | No, defaults `false`      | `true` only behind a proxy that sets `X-Forwarded-For` (Vercel, or nginx configured to) — step 21a    |
 
 Every variable is declared in [env/server.ts](env/server.ts) and validated with zod. That module is imported
 by [next.config.ts](next.config.ts), so an invalid value **fails the build** rather than surfacing on some
@@ -150,35 +153,38 @@ For the three variables that **have a default**, a blank value is read as absenc
 
 ## Scripts
 
-| Script                          | Description                                                                         |
-| ------------------------------- | ----------------------------------------------------------------------------------- |
-| `npm run dev`                   | Start the dev server                                                                |
-| `npm run build`                 | Production build (`output: 'standalone'`)                                           |
-| `npm run start`                 | Serve the production build                                                          |
-| `npm run lint`                  | ESLint — import order, cspell, canonical classes, Prettier                          |
-| `npm run lint:fix`              | ESLint with `--fix`                                                                 |
-| `npm run format`                | Prettier check                                                                      |
-| `npm run format:write`          | Prettier write                                                                      |
-| `npm run seed:super-admin`      | Create the super administrator (see below)                                          |
-| `npm run verify:data-model`     | Exercise the identity and directory models, then clean up                           |
-| `npm run verify:clinical-model` | Exercise the scheduling and clinical models, then clean up                          |
-| `npm run verify:auth`           | Exercise the session token and credential refusals, then clean up                   |
-| `npm run verify:users`          | Exercise the staff-account rules against the database, then clean up                |
-| `npm run verify:departments`    | Exercise the department rules (head, uniqueness, delete guard), then clean up       |
-| `npm run verify:services`       | Exercise the service catalogue and money handling, then clean up                    |
-| `npm run verify:patients`       | Exercise registration, the atomic record-number issuer and search, then clean up    |
-| `npm run verify:availability`   | Exercise the doctor/room clash checks and slot expansion, then clean up             |
-| `npm run verify:appointments`   | Exercise booking, the double-booking race, tokens and the queue, then clean up      |
-| `npm run verify:encounters`     | Exercise relationship-gated access and the append-only encounter, then clean up     |
-| `npm run verify:prescriptions`  | Exercise issue-from-open-encounter, immutability and supersede, then clean up       |
-| `npm run verify:lab`            | Exercise the magic-number check, the access matrix and GridFS upload, then clean up |
-| `npm run verify:vitals`         | Exercise the vitals write, the triage reorder of the queue, then clean up           |
-| `npm run verify:portal`         | Exercise the session-scoped reads and cross-owner refusals, then clean up           |
-| `npm run verify:registration`   | Exercise password hashing, single-use tokens and record claiming, then clean up     |
-| `npm run verify:profile`        | Exercise the pending email change, the current-password gate and field limits       |
-| `npm run verify:notices`        | Exercise audience targeting, emergency pinning and the image magic-number check     |
-| `npm run verify:notifications`  | Exercise record-first dispatch, read-scoping and the idempotent reminder sweep      |
-| `npm run reminders:run`         | Run the reminder sweep once (idempotent) — the job cron or PM2 calls on a schedule  |
+| Script                          | Description                                                                            |
+| ------------------------------- | -------------------------------------------------------------------------------------- |
+| `npm run dev`                   | Start the dev server                                                                   |
+| `npm run build`                 | Production build (`output: 'standalone'`)                                              |
+| `npm run start`                 | Serve the production build                                                             |
+| `npm run lint`                  | ESLint — import order, cspell, canonical classes, Prettier                             |
+| `npm run lint:fix`              | ESLint with `--fix`                                                                    |
+| `npm run format`                | Prettier check                                                                         |
+| `npm run format:write`          | Prettier write                                                                         |
+| `npm run seed:super-admin`      | Create the super administrator (see below)                                             |
+| `npm run verify:data-model`     | Exercise the identity and directory models, then clean up                              |
+| `npm run verify:clinical-model` | Exercise the scheduling and clinical models, then clean up                             |
+| `npm run verify:auth`           | Exercise the session token and credential refusals, then clean up                      |
+| `npm run verify:users`          | Exercise the staff-account rules against the database, then clean up                   |
+| `npm run verify:departments`    | Exercise the department rules (head, uniqueness, delete guard), then clean up          |
+| `npm run verify:services`       | Exercise the service catalogue and money handling, then clean up                       |
+| `npm run verify:patients`       | Exercise registration, the atomic record-number issuer and search, then clean up       |
+| `npm run verify:availability`   | Exercise the doctor/room clash checks and slot expansion, then clean up                |
+| `npm run verify:appointments`   | Exercise booking, the double-booking race, tokens and the queue, then clean up         |
+| `npm run verify:encounters`     | Exercise relationship-gated access and the append-only encounter, then clean up        |
+| `npm run verify:prescriptions`  | Exercise issue-from-open-encounter, immutability and supersede, then clean up          |
+| `npm run verify:lab`            | Exercise the magic-number check, the access matrix and GridFS upload, then clean up    |
+| `npm run verify:vitals`         | Exercise the vitals write, the triage reorder of the queue, then clean up              |
+| `npm run verify:portal`         | Exercise the session-scoped reads and cross-owner refusals, then clean up              |
+| `npm run verify:registration`   | Exercise password hashing, single-use tokens and record claiming, then clean up        |
+| `npm run verify:profile`        | Exercise the pending email change, the current-password gate and field limits          |
+| `npm run verify:notices`        | Exercise audience targeting, emergency pinning and the image magic-number check        |
+| `npm run verify:notifications`  | Exercise record-first dispatch, read-scoping and the idempotent reminder sweep         |
+| `npm run reminders:run`         | Run the reminder sweep once (idempotent) — the job cron or PM2 calls on a schedule     |
+| `npm run verify:billing`        | Exercise server-side pricing, payment-driven status and patient scoping, then clean up |
+| `npm run verify:analytics`      | Check every aggregated metric against an independent count, and no patient identity    |
+| `npm run verify:hardening`      | Exercise the rate limiter, the failure-counting sign-in and the audit trail            |
 
 The remaining `verify:*` scripts arrive with the services they exercise. Each writes to and deletes
 from the database `MONGODB_URI` points at (the lab script also writes to and clears its GridFS bucket). Every

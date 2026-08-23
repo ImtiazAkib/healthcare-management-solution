@@ -5,14 +5,18 @@ import { UserDto, userFromEntity } from '@/types';
 
 import { ABSENT_PASSWORD_HASH } from '@/constants/auth.const';
 import { CODES } from '@/constants/codes.const';
+import { RATE_LIMIT } from '@/constants/rate-limit.const';
 
 import { createLoggerWithContext } from '@/lib/logger';
 import { connectToDatabase } from '@/lib/mongodb';
 import { SingleResult, createError, singleFailure, singleSuccess } from '@/lib/result';
 
+import { consumeRateLimit, resetRateLimit } from './rate-limit.guard';
+
 const log = createLoggerWithContext('auth.service');
 
 const AUTH = CODES.AUTH.USERS;
+const TOO_MANY = CODES.BUSINESS.COMMON.TOO_MANY_REQUESTS;
 
 /**
  * Spend the same time refusing an address that has no account as one that has.
@@ -43,7 +47,19 @@ export class AuthService {
     try {
       await connectToDatabase();
 
-      const user = await User.findOne({ email: identifier.trim().toLowerCase() }).select('+password');
+      const identity = identifier.trim().toLowerCase();
+
+      /*
+        Counted before the comparison and keyed on the identifier exactly as typed, so a wrong
+        password and an unknown address throttle identically — the limiter cannot be used to tell
+        which addresses have accounts. It is cleared only on a real sign-in below, so it bounds
+        *consecutive* failures rather than legitimate use.
+      */
+      if (!(await consumeRateLimit('sign-in', identity, RATE_LIMIT.SIGN_IN))) {
+        return singleFailure(createError(TOO_MANY.CODE, TOO_MANY.MESSAGE));
+      }
+
+      const user = await User.findOne({ email: identity }).select('+password');
 
       /*
         **The comparison runs whether or not there is an account to compare against.**
@@ -81,6 +97,10 @@ export class AuthService {
       if (!user.isApproved) {
         return singleFailure(createError(AUTH.ACCOUNT_NOT_APPROVED.CODE, AUTH.ACCOUNT_NOT_APPROVED.MESSAGE));
       }
+
+      // A real sign-in clears the failure counter — and only here, past every state gate, so an
+      // unverified or unapproved account with the right password cannot be used as a reset oracle.
+      await resetRateLimit('sign-in', identity);
 
       return singleSuccess(userFromEntity(user));
     } catch (error) {

@@ -12,3 +12,7 @@ export * from './lab-order.model';
 export * from './lab-report.model';
 export * from './notice.model';
 export * from './notification.model';
+export * from './invoice.model';
+export * from './payment.model';
+export * from './rate-limit.model';
+export * from './audit-log.model';

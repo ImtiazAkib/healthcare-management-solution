@@ -1,23 +1,47 @@
 'use server';
 
+import { headers } from 'next/headers';
+
 import { z } from 'zod';
 
 import { env } from '@/env/server';
 
+import { CODES } from '@/constants/codes.const';
+import { RATE_LIMIT, RateLimitBudget } from '@/constants/rate-limit.const';
 import { ROUTES } from '@/constants/routes.const';
 
 import { getSessionUser, setSessionCookie } from '@/lib/auth';
 import { buildPasswordResetMail, buildVerifyAddressMail, mail } from '@/lib/mail';
-import { EmptyResult, emptyFailureWithErrors, emptySuccess, isSuccess } from '@/lib/result';
+import { EmptyResult, createError, emptyFailureWithErrors, emptySuccess, isSuccess } from '@/lib/result';
 import { PasswordResetSchema, PatientRegistrationSchema, VerificationTokenSchema } from '@/lib/schemas';
-import { ProfileService, RegistrationService } from '@/lib/services';
-import { mapZodErrorsToErrorDto } from '@/lib/utils';
+import { ProfileService, RegistrationService, consumeRateLimit } from '@/lib/services';
+import { mapZodErrorsToErrorDto, resolveCallerKey } from '@/lib/utils';
 
 const registrationService = new RegistrationService();
 const profileService = new ProfileService();
 
+const TOO_MANY = CODES.BUSINESS.COMMON.TOO_MANY_REQUESTS;
+
 // The email-only screens (resend, forgot password) validate just the address's shape.
 const EmailSchema = z.object({ email: z.string().trim().email('Enter a valid email address.') });
+
+/**
+ * Whether a public account flow has been called too often from this caller.
+ *
+ * Keyed on the caller, which is only meaningful behind a trusted proxy — without one every caller
+ * shares the `unknown-caller` bucket, and the flows stay bounded by other means (registration by email
+ * uniqueness, resend by a per-account cooldown) as the guard fails open regardless.
+ *
+ * @param scope - The budget's scope.
+ * @param budget - The limit and window.
+ *
+ * @returns True when the caller is over budget and should be refused.
+ */
+async function callerFlooded(scope: string, budget: RateLimitBudget): Promise<boolean> {
+  const caller = resolveCallerKey(await headers(), env.TRUSTED_PROXY);
+
+  return !(await consumeRateLimit(scope, caller, budget));
+}
 
 /*
   The unauthenticated account flows: register, verify, resend, forgot and reset.
@@ -50,6 +74,10 @@ function buildResetUrl(token: string): string {
  * @returns An empty success once the account exists (the link is on its way), or a failure.
  */
 export async function registerPatientAction(values: unknown): Promise<EmptyResult> {
+  if (await callerFlooded('register', RATE_LIMIT.REGISTER)) {
+    return emptyFailureWithErrors([createError(TOO_MANY.CODE, TOO_MANY.MESSAGE)]);
+  }
+
   const validation = PatientRegistrationSchema.safeParse(values);
 
   if (!validation.success) {
@@ -100,6 +128,10 @@ export async function verifyEmailAction(token: unknown): Promise<EmptyResult> {
  * @returns An empty success (or a shape-validation failure for a malformed address).
  */
 export async function resendConfirmationAction(values: unknown): Promise<EmptyResult> {
+  if (await callerFlooded('resend', RATE_LIMIT.RESEND)) {
+    return emptyFailureWithErrors([createError(TOO_MANY.CODE, TOO_MANY.MESSAGE)]);
+  }
+
   const validation = EmailSchema.safeParse(values);
 
   if (!validation.success) {
@@ -123,6 +155,10 @@ export async function resendConfirmationAction(values: unknown): Promise<EmptyRe
  * @returns An empty success (or a shape-validation failure for a malformed address).
  */
 export async function requestPasswordResetAction(values: unknown): Promise<EmptyResult> {
+  if (await callerFlooded('password-reset', RATE_LIMIT.PASSWORD_RESET)) {
+    return emptyFailureWithErrors([createError(TOO_MANY.CODE, TOO_MANY.MESSAGE)]);
+  }
+
   const validation = EmailSchema.safeParse(values);
 
   if (!validation.success) {
