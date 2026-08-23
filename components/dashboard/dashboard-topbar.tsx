@@ -1,12 +1,18 @@
+import type { Route } from 'next';
+
+import { NotificationBell } from '@/components/notifications';
+
 import { AccountMenu } from './account-menu';
 import { DashboardBreadcrumb } from './dashboard-breadcrumb';
 import { DashboardMobileNav } from './dashboard-mobile-nav';
 
-import type { UserRole } from '@/types';
+import type { NotificationDto, UserRole } from '@/types';
 
 type DashboardTopbarProps = {
   role: UserRole;
   user: { name: string; roleLabel: string; initials: string; accentClassName: string };
+  /** The bell's data, resolved once in the layout: the recent notifications, the unread count, and where "see all" goes. */
+  notifications: { items: NotificationDto[]; unreadCount: number; allHref: Route };
 };
 
 /*
@@ -17,7 +23,7 @@ type DashboardTopbarProps = {
   Its labels are literal here rather than props: the topbar has one caller, the dashboard
   layout, so there is no second consumer to lift them to a shared place for.
 */
-export function DashboardTopbar({ role, user }: DashboardTopbarProps) {
+export function DashboardTopbar({ role, user, notifications }: DashboardTopbarProps) {
   return (
     <header className="border-border bg-background z-40 shrink-0 border-b">
       <div className="flex h-16 items-center gap-2 px-4 lg:px-8">
@@ -26,6 +32,8 @@ export function DashboardTopbar({ role, user }: DashboardTopbarProps) {
         <DashboardBreadcrumb role={role} overviewLabel="Overview" ariaLabel="Breadcrumb" />
 
         <div className="ms-auto flex shrink-0 items-center gap-2">
+          <NotificationBell notifications={notifications.items} unreadCount={notifications.unreadCount} allHref={notifications.allHref} />
+
           <AccountMenu
             name={user.name}
             roleLabel={user.roleLabel}

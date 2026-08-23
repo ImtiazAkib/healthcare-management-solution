@@ -6,13 +6,15 @@ import { env } from '@/env/server';
 
 import { ROUTES } from '@/constants/routes.const';
 
+import { getSessionUser, setSessionCookie } from '@/lib/auth';
 import { buildPasswordResetMail, buildVerifyAddressMail, mail } from '@/lib/mail';
 import { EmptyResult, emptyFailureWithErrors, emptySuccess, isSuccess } from '@/lib/result';
 import { PasswordResetSchema, PatientRegistrationSchema, VerificationTokenSchema } from '@/lib/schemas';
-import { RegistrationService } from '@/lib/services';
+import { ProfileService, RegistrationService } from '@/lib/services';
 import { mapZodErrorsToErrorDto } from '@/lib/utils';
 
 const registrationService = new RegistrationService();
+const profileService = new ProfileService();
 
 // The email-only screens (resend, forgot password) validate just the address's shape.
 const EmailSchema = z.object({ email: z.string().trim().email('Enter a valid email address.') });
@@ -154,6 +156,40 @@ export async function resetPasswordAction(values: unknown): Promise<EmptyResult>
 
   if (!isSuccess(result)) {
     return emptyFailureWithErrors(result.errors);
+  }
+
+  return emptySuccess();
+}
+
+/**
+ * Confirm a requested email change from the link's token, and make the new address the one in force.
+ *
+ * Opened from an inbox, so it carries no session and validates the token alone. When the browser
+ * following the link happens to be signed in as the same account, its cookie is re-issued with the
+ * new address so the topbar and the next request agree at once; otherwise the change simply takes
+ * effect and shows on the next sign-in.
+ *
+ * @param token - The raw token from the link.
+ *
+ * @returns An empty success, or an invalid/expired-link failure.
+ */
+export async function confirmEmailChangeAction(token: unknown): Promise<EmptyResult> {
+  const validation = VerificationTokenSchema.safeParse(token);
+
+  if (!validation.success) {
+    return emptyFailureWithErrors(mapZodErrorsToErrorDto(validation.error));
+  }
+
+  const result = await profileService.confirmEmailChange(validation.data);
+
+  if (!isSuccess(result) || !result.result) {
+    return emptyFailureWithErrors(result.errors);
+  }
+
+  const session = await getSessionUser();
+
+  if (session && session.userId === result.result.userId) {
+    await setSessionCookie({ ...session, email: result.result.email });
   }
 
   return emptySuccess();

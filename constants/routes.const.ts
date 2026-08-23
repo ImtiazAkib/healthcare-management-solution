@@ -39,9 +39,41 @@ export const ROUTES = {
     LABEL: 'Reset password',
     HREF: '/reset-password',
   },
+  VERIFY_EMAIL_CHANGE: {
+    LABEL: 'Confirm your new email',
+    HREF: '/verify-email-change',
+  },
   UNAUTHORIZED: {
     LABEL: 'Not allowed',
     HREF: '/unauthorized',
+  },
+
+  // The one signed-in route outside a role's own area — every role reaches the same page.
+  PROFILE: {
+    LABEL: 'Profile',
+    HREF: '/profile',
+  },
+
+  // Notifications: one page per role area, so the bell links within the area the viewer is in.
+  ADMIN_NOTIFICATIONS: {
+    LABEL: 'Notifications',
+    HREF: '/admin/notifications',
+  },
+  DOCTOR_NOTIFICATIONS: {
+    LABEL: 'Notifications',
+    HREF: '/doctor/notifications',
+  },
+  NURSE_NOTIFICATIONS: {
+    LABEL: 'Notifications',
+    HREF: '/nurse/notifications',
+  },
+  LAB_NOTIFICATIONS: {
+    LABEL: 'Notifications',
+    HREF: '/lab/notifications',
+  },
+  PATIENT_NOTIFICATIONS: {
+    LABEL: 'Notifications',
+    HREF: '/patient/notifications',
   },
 
   // --- Role areas ---
@@ -97,6 +129,14 @@ export const ROUTES = {
     LABEL: 'Book an appointment',
     HREF: '/admin/appointments/new',
   },
+  ADMIN_NOTICES: {
+    LABEL: 'Notices',
+    HREF: '/admin/notices',
+  },
+  ADMIN_NOTICES_NEW: {
+    LABEL: 'Publish a notice',
+    HREF: '/admin/notices/new',
+  },
   DOCTOR: {
     LABEL: 'Doctor',
     HREF: '/doctor',
@@ -125,6 +165,10 @@ export const ROUTES = {
     LABEL: 'Lab orders',
     HREF: '/doctor/lab-orders',
   },
+  DOCTOR_NOTICES: {
+    LABEL: 'Notices',
+    HREF: '/doctor/notices',
+  },
   NURSE: {
     LABEL: 'Nurse',
     HREF: '/nurse',
@@ -137,6 +181,10 @@ export const ROUTES = {
     LABEL: 'Patients',
     HREF: '/nurse/patients',
   },
+  NURSE_NOTICES: {
+    LABEL: 'Notices',
+    HREF: '/nurse/notices',
+  },
   LAB: {
     LABEL: 'Diagnostic lab',
     HREF: '/lab',
@@ -144,6 +192,10 @@ export const ROUTES = {
   LAB_ORDERS: {
     LABEL: 'Lab orders',
     HREF: '/lab/orders',
+  },
+  LAB_NOTICES: {
+    LABEL: 'Notices',
+    HREF: '/lab/notices',
   },
   PATIENT: {
     LABEL: 'My health',
@@ -173,6 +225,10 @@ export const ROUTES = {
     LABEL: 'Find a doctor',
     HREF: '/patient/doctors',
   },
+  PATIENT_NOTICES: {
+    LABEL: 'Notices',
+    HREF: '/patient/notices',
+  },
 } as const;
 
 /**
@@ -193,15 +249,45 @@ export const ROLE_HOME = {
 } as const satisfies Record<UserRole, string>;
 
 /*
+  Notices and notifications live inside each role's own area, one page per area, so the nav entry and
+  the topbar bell can point within the area the viewer is in. The super administrator uses the admin
+  area's pages, the same way it lands there. Single-sourced here so the nav and the layout agree.
+*/
+export const ROLE_NOTICES = {
+  'super-admin': ROUTES.ADMIN_NOTICES.HREF,
+  admin: ROUTES.ADMIN_NOTICES.HREF,
+  doctor: ROUTES.DOCTOR_NOTICES.HREF,
+  nurse: ROUTES.NURSE_NOTICES.HREF,
+  lab: ROUTES.LAB_NOTICES.HREF,
+  patient: ROUTES.PATIENT_NOTICES.HREF,
+} as const satisfies Record<UserRole, string>;
+
+export const ROLE_NOTIFICATIONS = {
+  'super-admin': ROUTES.ADMIN_NOTIFICATIONS.HREF,
+  admin: ROUTES.ADMIN_NOTIFICATIONS.HREF,
+  doctor: ROUTES.DOCTOR_NOTIFICATIONS.HREF,
+  nurse: ROUTES.NURSE_NOTIFICATIONS.HREF,
+  lab: ROUTES.LAB_NOTIFICATIONS.HREF,
+  patient: ROUTES.PATIENT_NOTIFICATIONS.HREF,
+} as const satisfies Record<UserRole, string>;
+
+/*
   Route segments that require a session. One list, used twice: `proxy.ts` guards them and
   `seo.const.ts` disallows them in robots.txt. Keeping it single-sourced is what stops a
   route from being open to crawlers but unguarded, or the reverse.
 
-  `/profile` will be listed explicitly when it lands, because it is the one signed-in route
-  that sits outside a role's own area — every other protected path begins with one of these
-  prefixes and is covered whether anybody remembers it or not.
+  `/profile` is listed explicitly, because it is the one signed-in route that sits outside a
+  role's own area — every other protected path begins with one of these prefixes and is covered
+  whether anybody remembers it or not.
 */
-export const PROTECTED_SEGMENTS = [ROUTES.ADMIN.HREF, ROUTES.DOCTOR.HREF, ROUTES.NURSE.HREF, ROUTES.LAB.HREF, ROUTES.PATIENT.HREF] as const;
+export const PROTECTED_SEGMENTS = [
+  ROUTES.ADMIN.HREF,
+  ROUTES.DOCTOR.HREF,
+  ROUTES.NURSE.HREF,
+  ROUTES.LAB.HREF,
+  ROUTES.PATIENT.HREF,
+  ROUTES.PROFILE.HREF,
+] as const;
 
 /** Anchors on the landing page. */
 export const SECTION_IDS = {

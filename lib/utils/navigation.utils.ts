@@ -1,6 +1,7 @@
 import type { Route } from 'next';
 
 import {
+  Bell,
   Building2,
   CalendarCheck,
   CalendarClock,
@@ -9,12 +10,13 @@ import {
   HeartPulse,
   LayoutDashboard,
   ListOrdered,
+  Megaphone,
   Pill,
   UsersRound,
 } from 'lucide-react';
 
 import { ADMIN_AREA_ROLES, USER_ROLES } from '@/constants/roles.const';
-import { ROLE_HOME, ROUTES } from '@/constants/routes.const';
+import { ROLE_HOME, ROLE_NOTICES, ROLE_NOTIFICATIONS, ROUTES } from '@/constants/routes.const';
 
 import type { UserRole } from '@/types';
 import type { LucideIcon } from 'lucide-react';
@@ -88,10 +90,19 @@ export function resolveNavModel(role: UserRole): NavSection[] {
     clinical.push({ href: ROUTES.PATIENT_DOCTORS.HREF, icon: UsersRound, label: 'Find a doctor' });
   }
 
+  // Notices and notifications reach every role, so they are their own section rather than folded into
+  // one area's list. The routes are role-scoped — a doctor's Notices is `/doctor/notices` — and mapped
+  // per role, so the super administrator lands on the admin pages the same way it lands in the area.
+  const communication: NavItem[] = [
+    { href: ROLE_NOTICES[role], icon: Megaphone, label: 'Notices' },
+    { href: ROLE_NOTIFICATIONS[role], icon: Bell, label: 'Notifications' },
+  ];
+
   const sections: NavSection[] = [
     { id: 'overview', label: null, items: [{ href: ROLE_HOME[role], icon: LayoutDashboard, label: 'Overview' }] },
     { id: 'administration', label: 'Administration', items: administration },
     { id: 'clinical', label: null, items: clinical },
+    { id: 'communication', label: null, items: communication },
   ];
 
   return sections.filter(section => section.items.length > 0);

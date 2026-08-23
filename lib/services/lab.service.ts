@@ -9,17 +9,20 @@ import { LabOrderDto, LabReportDto, LabStatus, SessionUser, labOrderFromEntity, 
 import { CODES } from '@/constants/codes.const';
 import { ENCOUNTER_STATUSES } from '@/constants/encounter.const';
 import { LAB_PRIORITIES, LAB_REPORT_MIME_TYPES, LAB_STATUSES } from '@/constants/lab.const';
+import { NOTIFICATION_CHANNELS, NOTIFICATION_KINDS } from '@/constants/notification.const';
 import { USER_ROLES } from '@/constants/roles.const';
 import { STORAGE } from '@/constants/storage.const';
 
 import { createLoggerWithContext } from '@/lib/logger';
 import { connectToDatabase } from '@/lib/mongodb';
+import { resultReleasedContent } from '@/lib/notify';
 import { ListResult, SingleResult, createError, listFailure, listSuccess, singleFailure, singleSuccess } from '@/lib/result';
 import type { LabOrderCreateOutput, LabOrderStatusOutput, LabReportCreateOutput, LabReportReleaseOutput } from '@/lib/schemas';
 import { storage } from '@/lib/storage';
 import type { StoredFileStream } from '@/lib/storage';
 import { fileMatchesDeclaredType, toId } from '@/lib/utils';
 
+import { NotificationService } from './notification.service';
 import { hasStorageRoomFor } from './storage.guard';
 
 import type { DoctorEntity } from '@/models/doctor.model';
@@ -88,6 +91,8 @@ function isDuplicateKeyError(error: unknown): boolean {
     is itself disclosure.
 */
 export class LabService {
+  private readonly notificationService = new NotificationService();
+
   /**
    * Raise a lab order from the ordering doctor's own open encounter.
    *
@@ -509,11 +514,47 @@ export class LabService {
       // its Release control, and clicking it again reconciles through the branch above.
       await this.moveOrderToReleased(toId(report.labOrder));
 
+      // Best-effort: the release is what matters; the patient is told a result is ready, never what it is.
+      await this.notifyResultReleased(released);
+
       return singleSuccess(labReportFromEntity(released));
     } catch (error) {
       log.error({ err: error }, 'Releasing a lab report failed');
 
       return singleFailure(createError(DATABASE.LAB_REPORT_UPDATE_FAILED.CODE, DATABASE.LAB_REPORT_UPDATE_FAILED.MESSAGE));
+    }
+  }
+
+  /**
+   * Tell the patient a result is ready — in-app, and without naming it.
+   *
+   * Best-effort and swallowed: the release is the act that matters, and a notification failure must
+   * not undo it. The message says a result is ready and to sign in; the result itself stays behind
+   * the session, never in the notification.
+   *
+   * @param report - The report just released.
+   */
+  private async notifyResultReleased(report: LabReportEntity): Promise<void> {
+    try {
+      const patient = await Patient.findById(report.patient).select('user').lean<Pick<PatientEntity, 'user'> | null>();
+
+      if (!patient) {
+        return;
+      }
+
+      const content = resultReleasedContent();
+
+      await this.notificationService.notify({
+        recipientId: toId(patient.user),
+        channel: NOTIFICATION_CHANNELS.IN_APP,
+        kind: NOTIFICATION_KINDS.RESULT_RELEASED,
+        subject: content.subject,
+        body: content.body,
+        relatedType: 'labReport',
+        relatedId: toId(report._id),
+      });
+    } catch (error) {
+      log.warn({ err: error }, 'Writing a result-ready notification failed');
     }
   }
 
