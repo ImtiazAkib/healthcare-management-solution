@@ -121,3 +121,45 @@ export function buildPasswordResetMail(to: string, name: string, resetUrl: strin
     ),
   };
 }
+
+/**
+ * Confirm a new email address a signed-in account asked to move to.
+ *
+ * Sent to the **new** address — proving it is reachable is the whole point — while sign-in keeps
+ * working on the old one until this link is followed. The closing line is for somebody who did not
+ * ask: until the link is followed nothing has changed, so an unexpected message is safe to ignore.
+ *
+ * @param to - The new address being confirmed.
+ * @param name - The account holder's name.
+ * @param confirmUrl - Absolute URL carrying the token.
+ *
+ * @returns The rendered message.
+ */
+export function buildVerifyEmailChangeMail(to: string, name: string, confirmUrl: string): MailMessage {
+  const safeName = escapeHtml(name);
+  const safeUrl = escapeHtml(confirmUrl);
+
+  return {
+    to,
+    subject: `Confirm your new email address — ${APP_DATA.SHORT_NAME}`,
+    text: [
+      `Hello ${name},`,
+      '',
+      'Confirm this address to make it the one you sign in with. It works once and expires in a day.',
+      '',
+      confirmUrl,
+      '',
+      'If you did not ask to change your email, ignore this message — nothing changes and your current address still works.',
+    ].join('\n'),
+    html: wrap(
+      'Confirm your new email address',
+      [
+        `<p>Hello ${safeName},</p>`,
+        '<p>Confirm this address to make it the one you sign in with. It works once and expires in a day.</p>',
+        `<p><a href="${safeUrl}" style="display:inline-block;background:#4f46e5;color:#fff;padding:0.6rem 1.1rem;border-radius:6px;text-decoration:none">Confirm my new address</a></p>`,
+        `<p style="font-size:0.85rem;color:#666c85">Or paste this into your browser:<br>${safeUrl}</p>`,
+        '<p style="font-size:0.85rem;color:#666c85">If you did not ask to change your email, ignore this message — nothing changes and your current address still works.</p>',
+      ].join('')
+    ),
+  };
+}

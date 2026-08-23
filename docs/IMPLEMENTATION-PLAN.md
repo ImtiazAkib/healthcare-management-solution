@@ -45,9 +45,9 @@ in a working state.
 | [13](#step-13)   | Patient portal                          | Phase 4        | ✅ Done        |
 | [14](#step-14)   | Nurse workspace — triage & vitals       | Phase 4        | ✅ Done        |
 | [15](#step-15)   | Accounts — registration & email         | Phase 5        | ✅ Done        |
-| [16](#step-16)   | Profiles                                | Phase 5        | ⬜ Not started |
-| [17](#step-17)   | Notices & announcements                 | Phase 5        | ⬜ Not started |
-| [18](#step-18)   | Notifications, reminders & alerts       | Phase 5        | ⬜ Not started |
+| [16](#step-16)   | Profiles                                | Phase 5        | ✅ Done        |
+| [17](#step-17)   | Notices & announcements                 | Phase 5        | ✅ Done        |
+| [18](#step-18)   | Notifications, reminders & alerts       | Phase 5        | ✅ Done        |
 | [19](#step-19)   | Billing & payments                      | Phase 5        | ⬜ Not started |
 | [20](#step-20)   | Analytics & reporting                   | Phase 5        | ⬜ Not started |
 | [21a](#step-21a) | Hardening                               | Phase 6        | ⬜ Not started |
@@ -1847,7 +1847,7 @@ when verified **and** approved. An adversarial security review of the flow found
 
 <a id="step-16"></a>
 
-### Step 16 — Profiles
+### Step 16 — Profiles ✅ Done
 
 **Goal.** The four things a person may change about themselves, and the one that needs proof.
 
@@ -1880,16 +1880,34 @@ constants/codes-profile.const.ts
 - A password change requires the current password and ends every other consideration: it does not reveal
   whether the account exists, because you are already signed in.
 
-**Acceptance.** Each role edits their own name and phone and sees the topbar update without signing out; an
-email change sends a link and does not take effect until it is followed; the old address still works for
-sign-in until then; a patient cannot edit their allergies or their MRN through the form or through a
-hand-built request; a wrong current password refuses the change.
+**Acceptance.** ✅ Verified. `npm run verify:profile` — all checks green, fixtures torn down — proves the rules
+the screen cannot vouch for: a name/phone/gender/DOB edit writes through and the re-issued session carries the
+new name; an email change is **held pending** — `email` and the session keep the old address until the link is
+followed, and the link works **once**; a change onto a **taken** address is refused with nothing left pending;
+a wrong **current password** refuses the change and the new one is stored **hashed**; the update schema carries
+**no** role/approval/record-number fields, so a hand-built request naming them is stripped; and a patient edits
+their own emergency contact and address but **not** the clinical record, while a staff account has none to
+edit. The topbar name updates because the cookie is re-issued from the saved record on every edit.
+
+**Deviations.**
+
+- **A dedicated `ProfileService`**, not methods on `UserService` — the deliverable list calls for one, and it
+  keeps self-service (pinned to the session's `userId`) apart from the admin edit (id-addressed).
+- **Protected fields are blocked by absence, not by filtering.** The schemas carry no `role`, `isApproved`,
+  `medicalRecordNo` or `registrationNo`, so there is nothing to strip because there is nothing to name.
+- **The email change reuses step 15's token machinery** — hashed, single-use, expiring — in
+  `pendingEmail`/`pendingEmailTokenHash` on the `User` row, re-checked for a collision at confirm time. The
+  confirm action sits with the other inbox flows in `registration.actions.ts` because it carries no session;
+  the session-authenticated edits live in `components/profile/actions.ts`. Profile takes the Users feature's
+  `112xx`/`212xx` sub-band.
+- **Emergency contact and address take their own schema, form and action**, since they write the `Patient`
+  record rather than the account.
 
 ---
 
 <a id="step-17"></a>
 
-### Step 17 — Notices and announcements
+### Step 17 — Notices and announcements ✅ Done
 
 **Goal.** The hospital tells people things — everyone, or just the staff, or just the patients.
 
@@ -1921,16 +1939,34 @@ constants/codes-notices.const.ts · notice.const.ts
   pattern — a small guard against the most likely accidental disclosure in the whole app.
 - The dashboard feed renders a failure banner, not an empty state, when the query fails.
 
-**Acceptance.** An administrator publishes a notice to patients and it appears on patient dashboards and on no
-staff dashboard; a department-targeted notice reaches only that department; an emergency notice pins and is
-styled distinctly; an image uploads, renders and is refused when it is not really an image; a notice body
-containing an MRN is refused.
+**Acceptance.** ✅ Verified. `npm run verify:notices` — all checks green, fixtures torn down (images removed
+from the bucket) — proves: a **patients** notice reaches the patient feed and **no** staff feed, and a
+**staff** notice the reverse; a **department** notice reaches that department's doctors and no other
+department, nurse or patient; an **emergency** notice **pins to the top** of the feed ahead of a newer one; an
+image whose bytes do not match its declared type is **refused**, while a real one stores, streams, and is
+**refused to a viewer outside the audience** (the same not-found a missing notice gives); a title or body
+carrying a **medical record number** is refused; and deleting a notice removes its image bytes. Targeting is
+applied in the query — the payload is the disclosure.
+
+**Deviations.**
+
+- **Emergency, pinning and the MRN guard are healthcare additions** with no analog in the reference project.
+  Pinning is done in an aggregation (`pinRank`, then `publishedAt`), so an emergency pins even when older than
+  the feed limit.
+- **Notice images share the lab-report GridFS bucket and its cap** — the shared `STORAGE_FULL` code was written
+  for exactly this — so no second bucket or quota guard was added, and the magic-number check reuses the lab
+  report's `fileMatchesDeclaredType`.
+- **Department targeting reaches a department's doctors**, because only a doctor carries a department in this
+  data model; nurses and lab staff are department-agnostic, so a department notice does not reach them.
+- **Notices mutate through route handlers, not Server Actions** (`app/api/notices/**`), because an optional
+  image upload wants a streaming `FormData` — so there is no `components/notices/actions.ts`. Notices take the
+  Communication feature's `170xx`/`270xx` codes.
 
 ---
 
 <a id="step-18"></a>
 
-### Step 18 — Notifications, reminders and alerts
+### Step 18 — Notifications, reminders and alerts ✅ Done
 
 **Goal.** The system reaches out — appointment reminders, result-ready messages, follow-up nudges — and keeps
 a record of what it sent.
@@ -1971,10 +2007,28 @@ constants/codes-notifications.const.ts · notification.const.ts
 - Emergency alerts are the one notification that fans out to a role rather than a person, and they reuse
   step 17's audience targeting rather than inventing a second one.
 
-**Acceptance.** Booking an appointment writes a confirmation notification and the patient sees it in-app; the
-reminder sweep run twice for the same day produces one reminder per appointment; releasing a lab report
-notifies the patient without naming the test result; a failed email leaves a `FAILED` row carrying the reason;
-with both transports set to log, every path completes and is inspectable in the log.
+**Acceptance.** ✅ Verified. `npm run verify:notifications` — all checks green, fixtures torn down, both
+transports the default logs — proves: an in-app notification is **written and seen at once**; booking an
+appointment **writes a confirmation** the patient sees; the **reminder sweep run twice** writes exactly **one**
+reminder per appointment (idempotent by query, and by a partial unique index against a race); a dispatch that
+cannot reach its recipient leaves a **`failed` row carrying the reason** rather than vanishing; **read is
+scoped** to the recipient (nobody marks another's read); an **emergency notice fans out** to its audience as
+in-app alerts; and a released-result message **names no result** — it says a result is ready and to sign in.
+
+**Deviations.**
+
+- **The subsystem is new** — the reference has no notifications — so it is modelled on the mail layer: a
+  one-method channel contract that **resolves rather than throws**, with `log`/`email`/`sms` drivers selected by
+  env, mirroring `MAIL_TRANSPORT`. SMS ships with the **logging** transport only (`isSmsConfigured` is what the
+  UI would check before claiming an SMS was sent); a real provider is one file away.
+- **Reminders are a sweep** (`scripts/run-reminders.ts`, `npm run reminders:run`), idempotent and run by
+  cron/PM2 — there is no in-process scheduler, because a serverless instance is not alive when a reminder is
+  due.
+- **The booking, release and emergency hooks are best-effort** — each wrapped so a notification failure is
+  logged and never rolls back the booking, the release or the publish.
+- **A notification page per role** (`{role}/notifications`), each a thin server page over one `NotificationList`;
+  the topbar bell is fed once from the dashboard layout. Notifications take the Communication feature's
+  `171xx`/`271xx` codes, and this step adds `SMS_TRANSPORT` + `SMS_*` to the environment.
 
 ---
 

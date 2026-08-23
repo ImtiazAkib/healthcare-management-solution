@@ -4,6 +4,7 @@
   The two components that call an action import it by relative path instead.
 */
 export * from './auth-card';
+export * from './email-change-verification';
 export * from './email-verification';
 export * from './forgot-password.form';
 export * from './form-error-alert';

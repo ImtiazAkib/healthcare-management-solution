@@ -90,6 +90,18 @@ export const env = createEnv({
     SMTP_USER: blankAsAbsent(z.string().min(1).optional()),
     SMTP_PASSWORD: blankAsAbsent(z.string().min(1).optional()),
     SMTP_FROM: blankAsAbsent(z.string().min(1).default('CareSync <no-reply@localhost>')),
+
+    /*
+      SMS. The same shape as mail: the transport is chosen explicitly, and `log` (the default) writes
+      each message to the logger rather than sending it — the call sites and the records are real, the
+      wire is not, until a provider is supplied. The provider settings are optional because they are
+      read only when a real transport is selected. Nothing claims an SMS was delivered when it went to
+      the log.
+    */
+    SMS_TRANSPORT: blankAsAbsent(z.enum(['log', 'twilio']).default('log')),
+    SMS_ACCOUNT_SID: blankAsAbsent(z.string().min(1).optional()),
+    SMS_AUTH_TOKEN: blankAsAbsent(z.string().min(1).optional()),
+    SMS_FROM: blankAsAbsent(z.string().min(1).optional()),
   },
   experimental__runtimeEnv: process.env,
 });

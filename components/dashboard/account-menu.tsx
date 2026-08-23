@@ -2,7 +2,11 @@
 
 import { useTransition } from 'react';
 
-import { ChevronDown, LogOut } from 'lucide-react';
+import Link from 'next/link';
+
+import { ChevronDown, LogOut, UserRound } from 'lucide-react';
+
+import { ROUTES } from '@/constants/routes.const';
 
 import { cn } from '@/lib/utils';
 
@@ -15,6 +19,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Spinner,
@@ -64,6 +69,13 @@ export function AccountMenu({ name, roleLabel, initials, accentClassName, signOu
           <span className="text-foreground truncate text-sm font-medium">{name}</span>
           <span className={cn('text-xs font-medium', accentClassName)}>{roleLabel}</span>
         </DropdownMenuLabel>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuLinkItem render={<Link href={ROUTES.PROFILE.HREF} />}>
+          <UserRound />
+          Profile
+        </DropdownMenuLinkItem>
 
         <DropdownMenuSeparator />
 

@@ -8,13 +8,17 @@ import { AppointmentDto, appointmentFromEntity } from '@/types';
 
 import { APPOINTMENT_STATUSES, SLOT_HOLDING_STATUSES } from '@/constants/appointment.const';
 import { CODES } from '@/constants/codes.const';
+import { NOTIFICATION_CHANNELS, NOTIFICATION_KINDS } from '@/constants/notification.const';
 import { FILTER_ALL } from '@/constants/users.const';
 
 import { createLoggerWithContext } from '@/lib/logger';
 import { connectToDatabase } from '@/lib/mongodb';
+import { appointmentConfirmedContent } from '@/lib/notify';
 import { ListResult, SingleResult, createError, listFailure, listSuccessWithInfo, singleFailure, singleSuccess } from '@/lib/result';
 import type { AppointmentCreateOutput, AppointmentFiltersOutput, AppointmentRescheduleOutput, AppointmentStatusOutput } from '@/lib/schemas';
 import { canTransition, dayOfWeekFor, expandSlots, isSlotPast, toId } from '@/lib/utils';
+
+import { NotificationService } from './notification.service';
 
 import type { AppointmentAttributes, AppointmentEntity } from '@/models/appointment.model';
 import type { AvailabilityEntity } from '@/models/availability.model';
@@ -68,6 +72,8 @@ function isDuplicateKeyError(error: unknown): boolean {
     to pass. Every move goes through `canTransition`, so no screen can invent one.
 */
 export class AppointmentService {
+  private readonly notificationService = new NotificationService();
+
   /**
    * The slots a doctor can still be booked into on a date — availability minus what is taken.
    *
@@ -203,6 +209,9 @@ export class AppointmentService {
         bookedBy: bookedById,
       });
 
+      // Best-effort: the appointment is booked whether or not its confirmation reaches the patient.
+      await this.notifyBookingConfirmed(created);
+
       return singleSuccess(appointmentFromEntity(created));
     } catch (error) {
       if (isDuplicateKeyError(error)) {
@@ -212,6 +221,39 @@ export class AppointmentService {
       log.error({ err: error }, 'Booking an appointment failed');
 
       return singleFailure(createError(DATABASE.CREATE_FAILED.CODE, DATABASE.CREATE_FAILED.MESSAGE));
+    }
+  }
+
+  /**
+   * Write the patient an in-app confirmation that their appointment is booked.
+   *
+   * Best-effort and swallowed: a booking is booked whether or not this reaches them, so a failure
+   * here is logged and never surfaced as a booking failure. The message names when, not why — no
+   * clinical content rides in a notification.
+   *
+   * @param appointment - The appointment just booked.
+   */
+  private async notifyBookingConfirmed(appointment: AppointmentEntity): Promise<void> {
+    try {
+      const patient = await Patient.findById(appointment.patient).select('user').lean<Pick<PatientEntity, 'user'> | null>();
+
+      if (!patient) {
+        return;
+      }
+
+      const content = appointmentConfirmedContent(`${appointment.date} at ${appointment.startTime}`);
+
+      await this.notificationService.notify({
+        recipientId: toId(patient.user),
+        channel: NOTIFICATION_CHANNELS.IN_APP,
+        kind: NOTIFICATION_KINDS.APPOINTMENT_CONFIRMED,
+        subject: content.subject,
+        body: content.body,
+        relatedType: 'appointment',
+        relatedId: toId(appointment._id),
+      });
+    } catch (error) {
+      log.warn({ err: error }, 'Writing a booking confirmation notification failed');
     }
   }
 

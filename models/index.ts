@@ -10,3 +10,5 @@ export * from './encounter.model';
 export * from './prescription.model';
 export * from './lab-order.model';
 export * from './lab-report.model';
+export * from './notice.model';
+export * from './notification.model';
