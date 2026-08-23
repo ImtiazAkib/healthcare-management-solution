@@ -5,12 +5,14 @@ import { UserCog } from 'lucide-react';
 import { CODES, USER_ROLES } from '@/constants';
 
 import { requireRole } from '@/lib/auth';
-import { PatientPortalService } from '@/lib/services';
+import { NoticeService, PatientPortalService } from '@/lib/services';
 
+import { DashboardNotices } from '@/components/dashboard';
 import { PatientDashboard } from '@/components/patient';
 import { EmptyState, PageHeader } from '@/components/ui';
 
 const portalService = new PatientPortalService();
+const noticeService = new NoticeService();
 
 export const metadata: Metadata = {
   title: 'My health',
@@ -43,6 +45,8 @@ export default async function PatientPage() {
     );
   }
 
+  const notices = await noticeService.listForRole(sessionUser);
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -51,6 +55,8 @@ export default async function PatientPage() {
       />
 
       <PatientDashboard overview={overview.result} />
+
+      <DashboardNotices result={notices} />
     </div>
   );
 }

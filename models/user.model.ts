@@ -59,6 +59,17 @@ export type UserAttributes = {
   emailVerificationExpiresAt?: Date;
   passwordResetTokenHash?: string;
   passwordResetExpiresAt?: Date;
+  /*
+    A requested-but-unproven email address, held apart from `email` until its link is followed. The
+    current address is the channel a password reset is sent to, so trusting a new one before it is
+    proven would turn a borrowed session into a permanent account theft — the session keeps signing in
+    with the old address until the change is confirmed. `pendingEmail` is not unique: two people may
+    ask for the same address, and only the one who proves it gets it. The token pair is hashed,
+    `select: false`, and cleared the moment the address is written, which is what makes it single-use.
+  */
+  pendingEmail?: string;
+  pendingEmailTokenHash?: string;
+  pendingEmailExpiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -96,6 +107,10 @@ const userSchema = new Schema<UserAttributes, UserModel, UserMethods>(
     emailVerificationExpiresAt: { type: Date, select: false },
     passwordResetTokenHash: { type: String, select: false },
     passwordResetExpiresAt: { type: Date, select: false },
+    // A requested address held apart from `email` until proven, with its own hashed token pair. See the attribute.
+    pendingEmail: { type: String, lowercase: true, trim: true, select: false, maxlength: ACCOUNT_FIELD_LIMITS.EMAIL },
+    pendingEmailTokenHash: { type: String, select: false },
+    pendingEmailExpiresAt: { type: Date, select: false },
   },
   { timestamps: true }
 );

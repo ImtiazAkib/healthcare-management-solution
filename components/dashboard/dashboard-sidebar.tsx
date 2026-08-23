@@ -22,8 +22,8 @@ type DashboardSidebarProps = {
   the height of the topbar so the two line up across the shell, the scrolling sectioned nav,
   and a user block pinned to the bottom carrying identity — who-am-I on a shared screen.
 
-  The user block is a plain block rather than a link, because the profile page it will point
-  at lands in step 16. When it does, this becomes a `Link` to it.
+  The user block is a `Link` to the profile page: tapping who-you-are is where everyone reaches
+  to change it, so the identity band doubles as the way in.
 */
 export function DashboardSidebar({ role, navAriaLabel, user }: DashboardSidebarProps) {
   return (
@@ -39,7 +39,9 @@ export function DashboardSidebar({ role, navAriaLabel, user }: DashboardSidebarP
         <DashboardNav role={role} ariaLabel={navAriaLabel} variant="sidebar" />
       </div>
 
-      <div className="border-sidebar-border flex shrink-0 items-center gap-2.5 border-t p-4">
+      <Link
+        href={ROUTES.PROFILE.HREF}
+        className="border-sidebar-border hover:bg-sidebar-accent flex shrink-0 items-center gap-2.5 border-t p-4 transition-colors">
         <Avatar className="size-8">
           <AvatarFallback>{user.initials}</AvatarFallback>
         </Avatar>
@@ -48,7 +50,7 @@ export function DashboardSidebar({ role, navAriaLabel, user }: DashboardSidebarP
           <span className="text-sidebar-foreground truncate text-sm font-medium">{user.name}</span>
           <span className={cn('truncate text-xs font-medium', user.accentClassName)}>{user.roleLabel}</span>
         </span>
-      </div>
+      </Link>
     </aside>
   );
 }

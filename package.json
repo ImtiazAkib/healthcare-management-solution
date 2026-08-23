@@ -27,6 +27,10 @@
     "verify:vitals": "tsx --env-file-if-exists=.env.local scripts/verify-vitals-service.ts",
     "verify:portal": "tsx --env-file-if-exists=.env.local scripts/verify-portal-service.ts",
     "verify:registration": "tsx --env-file-if-exists=.env.local scripts/verify-registration.ts",
+    "verify:profile": "tsx --env-file-if-exists=.env.local scripts/verify-profile-service.ts",
+    "verify:notices": "tsx --env-file-if-exists=.env.local scripts/verify-notice-service.ts",
+    "verify:notifications": "tsx --env-file-if-exists=.env.local scripts/verify-notification-service.ts",
+    "reminders:run": "tsx --env-file-if-exists=.env.local scripts/run-reminders.ts",
     "prepare": "husky"
   },
   "dependencies": {

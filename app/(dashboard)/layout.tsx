@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 
 import { MAIN_CONTENT_ID } from '@/constants/a11y.const';
+import { ROLE_NOTIFICATIONS } from '@/constants/routes.const';
 
 import { requireSession } from '@/lib/auth';
+import { NotificationService } from '@/lib/services';
 import { resolveInitials, resolveRoleLabel, roleAccentClassName } from '@/lib/utils';
 
 import { DashboardSidebar, DashboardTopbar } from '@/components/dashboard';
@@ -41,12 +43,28 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     accentClassName: roleAccentClassName(sessionUser.role),
   };
 
+  /*
+    The bell's data, resolved once for the whole shell: a few recent notifications for the preview and
+    the unread count for the badge. Both fail soft — an unreachable feed leaves an empty bell, not a
+    broken page — because the notification service is best-effort by design.
+  */
+  const notificationService = new NotificationService();
+  const [recent, unreadCount] = await Promise.all([
+    notificationService.listForRecipient(sessionUser.userId, 5),
+    notificationService.unreadCount(sessionUser.userId),
+  ]);
+  const notifications = {
+    items: recent.success ? recent.result : [],
+    unreadCount,
+    allHref: ROLE_NOTIFICATIONS[sessionUser.role],
+  };
+
   return (
     <div className="flex h-dvh flex-col overflow-hidden lg:flex-row">
       <DashboardSidebar role={sessionUser.role} navAriaLabel="Main navigation" user={user} />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <DashboardTopbar role={sessionUser.role} user={user} />
+        <DashboardTopbar role={sessionUser.role} user={user} notifications={notifications} />
 
         <main id={MAIN_CONTENT_ID} tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto p-4 lg:p-8">
           {children}
