@@ -12,9 +12,10 @@ import { APPOINTMENT_STATUSES } from '@/constants/appointment.const';
 
 import { SingleResult, isSuccess } from '@/lib/result';
 
+import { openEncounterAction } from '@/components/encounters/actions';
 import { PageHeader, Spinner } from '@/components/ui';
 
-import { checkInAction, completeConsultationAction, noShowAction, startConsultationAction } from './actions';
+import { checkInAction, noShowAction } from './actions';
 import { QueueActions } from './queue-actions';
 import { QueueEmpty } from './queue-empty';
 import { QueueRow } from './queue-row';
@@ -73,12 +74,31 @@ export function QueueScreen({ entries, waiting, role, doctorPicker }: QueueScree
     });
   };
 
-  const handleStart = (entry: QueueEntry): void => {
-    runStatusChange(startConsultationAction, entry, APPOINTMENT_STATUSES.IN_CONSULTATION, 'Consultation started.');
-  };
+  /*
+    The doctor's one move on the queue: open the consultation record and go to it. A row already in
+    consultation carries its encounter, so resuming is a straight navigation; a checked-in row has
+    none yet, so the record is opened first — which also moves the appointment into consultation and
+    drops the patient from "waiting". The visit is documented and completed inside that record, not
+    from the queue, so there is no way here to complete a visit that was never written down.
+  */
+  const handleOpenConsultation = (entry: QueueEntry): void => {
+    startWorking(async () => {
+      if (entry.encounterId) {
+        router.push(`/doctor/encounters/${entry.encounterId}`);
 
-  const handleComplete = (entry: QueueEntry): void => {
-    runStatusChange(completeConsultationAction, entry, APPOINTMENT_STATUSES.COMPLETED, 'Consultation completed.');
+        return;
+      }
+
+      const result = await openEncounterAction({ appointmentId: entry.appointmentId });
+
+      if (!isSuccess(result) || !result.result) {
+        toast.error(result.errors[0]?.error ?? 'Something went wrong. Try again.');
+
+        return;
+      }
+
+      router.push(`/doctor/encounters/${result.result.encounterId}`);
+    });
   };
 
   const handleCheckIn = (entry: QueueEntry): void => {
@@ -135,7 +155,7 @@ export function QueueScreen({ entries, waiting, role, doctorPicker }: QueueScree
         ) : (
           <ul aria-live="polite" className="flex flex-col gap-2">
             {entries.map(entry => (
-              <QueueRow key={entry.appointmentId} entry={entry} role={role} isWorking={isWorking} onStart={handleStart} onComplete={handleComplete} />
+              <QueueRow key={entry.appointmentId} entry={entry} role={role} isWorking={isWorking} onOpenConsultation={handleOpenConsultation} />
             ))}
           </ul>
         )}
