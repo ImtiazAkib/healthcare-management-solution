@@ -1,6 +1,17 @@
 import type { Route } from 'next';
 
-import { Building2, CalendarCheck, CalendarClock, ClipboardList, HeartPulse, LayoutDashboard, ListOrdered, UsersRound } from 'lucide-react';
+import {
+  Building2,
+  CalendarCheck,
+  CalendarClock,
+  ClipboardList,
+  FlaskConical,
+  HeartPulse,
+  LayoutDashboard,
+  ListOrdered,
+  Pill,
+  UsersRound,
+} from 'lucide-react';
 
 import { ADMIN_AREA_ROLES, USER_ROLES } from '@/constants/roles.const';
 import { ROLE_HOME, ROUTES } from '@/constants/routes.const';
@@ -53,10 +64,18 @@ export function resolveNavModel(role: UserRole): NavSection[] {
     clinical.push({ href: ROUTES.DOCTOR_AVAILABILITY.HREF, icon: CalendarClock, label: 'My availability' });
     clinical.push({ href: ROUTES.DOCTOR_APPOINTMENTS.HREF, icon: CalendarCheck, label: 'Appointments' });
     clinical.push({ href: ROUTES.DOCTOR_QUEUE.HREF, icon: ListOrdered, label: 'Queue' });
+    clinical.push({ href: ROUTES.DOCTOR_PATIENTS.HREF, icon: HeartPulse, label: 'Patients' });
+    clinical.push({ href: ROUTES.DOCTOR_PRESCRIPTIONS.HREF, icon: Pill, label: 'Prescriptions' });
+    clinical.push({ href: ROUTES.DOCTOR_LAB_ORDERS.HREF, icon: FlaskConical, label: 'Lab orders' });
   }
 
   if (role === USER_ROLES.NURSE) {
     clinical.push({ href: ROUTES.NURSE_QUEUE.HREF, icon: ListOrdered, label: 'Queue' });
+  }
+
+  // The diagnostic lab works one list — the orders waiting on it.
+  if (role === USER_ROLES.LAB) {
+    clinical.push({ href: ROUTES.LAB_ORDERS.HREF, icon: FlaskConical, label: 'Lab orders' });
   }
 
   const sections: NavSection[] = [

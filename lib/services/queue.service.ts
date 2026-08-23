@@ -1,4 +1,5 @@
 import { Appointment } from '@/models/appointment.model';
+import { Encounter } from '@/models/encounter.model';
 import { Patient } from '@/models/patient.model';
 import { User } from '@/models/user.model';
 import { AppointmentDto, appointmentFromEntity } from '@/types';
@@ -12,6 +13,7 @@ import { ListResult, createError, listFailure, listSuccess } from '@/lib/result'
 import { compareQueueOrder, toId } from '@/lib/utils';
 
 import type { AppointmentEntity } from '@/models/appointment.model';
+import type { EncounterEntity } from '@/models/encounter.model';
 import type { PatientEntity } from '@/models/patient.model';
 import type { UserEntity } from '@/models/user.model';
 
@@ -19,10 +21,16 @@ const log = createLoggerWithContext('queue.service');
 
 const DATABASE = CODES.DATABASE.APPOINTMENTS;
 
-/** A queue row: an appointment with the patient's name and record number. */
+/** A queue row: an appointment with the patient's name, record number, and the encounter behind it. */
 export type QueueEntry = AppointmentDto & {
   patientName: string;
   medicalRecordNo: string;
+  /*
+    The open encounter for this appointment, when one exists — the doctor started the consultation,
+    so the row resumes into that record rather than opening a second. `null` for a patient still
+    waiting to be called, whose visit has no encounter yet.
+  */
+  encounterId: string | null;
 };
 
 // Present in the building: checked in and waiting, or in with the doctor.
@@ -107,8 +115,16 @@ export class QueueService {
     const accounts = await User.find({ _id: { $in: patients.map(patient => patient.user) } })
       .select('_id name')
       .lean<Pick<UserEntity, '_id' | 'name'>[]>();
+
+    // The encounter behind each appointment, when the doctor has already opened one, so a row in
+    // consultation resumes into the existing record rather than being offered a fresh start.
+    const encounters = await Encounter.find({ appointment: { $in: appointments.map(appointment => appointment._id) } })
+      .select('_id appointment')
+      .lean<Pick<EncounterEntity, '_id' | 'appointment'>[]>();
+
     const nameByUserId = new Map(accounts.map(account => [toId(account._id), account.name]));
     const patientById = new Map(patients.map(patient => [toId(patient._id), patient]));
+    const encounterByAppointmentId = new Map(encounters.map(encounter => [toId(encounter.appointment), toId(encounter._id)]));
 
     return appointments.map(appointment => {
       const dto = appointmentFromEntity(appointment);
@@ -118,6 +134,13 @@ export class QueueService {
         ...dto,
         patientName: patient ? (nameByUserId.get(toId(patient.user)) ?? '—') : '—',
         medicalRecordNo: patient?.medicalRecordNo ?? '—',
+        /*
+          The id is surfaced only for a patient actually in consultation, so "has an encounter" and
+          "in consultation" cannot disagree. A checked-in row never carries one — its Start button
+          opens the record through the service, which is what moves the visit into consultation;
+          trusting a stray encounter on a checked-in row would let the screen skip that move.
+        */
+        encounterId: dto.status === APPOINTMENT_STATUSES.IN_CONSULTATION ? (encounterByAppointmentId.get(dto.appointmentId) ?? null) : null,
       };
     });
   }

@@ -23,7 +23,7 @@ const PRIORITY_VARIANTS: Record<TriagePriority, 'destructive' | 'warning' | 'neu
  * One live-queue entry: the token that fixes arrival order, the patient and their record number,
  * a priority chip, the appointment time, and the doctor's move for wherever the visit has got.
  */
-export function QueueRow({ entry, role, isWorking, onStart, onComplete }: QueueRowProps) {
+export function QueueRow({ entry, role, isWorking, onOpenConsultation }: QueueRowProps) {
   return (
     <li className="border-border flex items-center gap-4 rounded-lg border p-4">
       <div className="bg-muted flex size-14 shrink-0 flex-col items-center justify-center rounded-lg">
@@ -41,7 +41,7 @@ export function QueueRow({ entry, role, isWorking, onStart, onComplete }: QueueR
         </p>
       </div>
 
-      <QueueActions context="queue" entry={entry} role={role} isWorking={isWorking} onStart={onStart} onComplete={onComplete} />
+      <QueueActions context="queue" entry={entry} role={role} isWorking={isWorking} onOpenConsultation={onOpenConsultation} />
     </li>
   );
 }

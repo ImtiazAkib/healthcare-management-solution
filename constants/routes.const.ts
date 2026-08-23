@@ -89,6 +89,18 @@ export const ROUTES = {
     LABEL: 'Queue',
     HREF: '/doctor/queue',
   },
+  DOCTOR_PATIENTS: {
+    LABEL: 'Patients',
+    HREF: '/doctor/patients',
+  },
+  DOCTOR_PRESCRIPTIONS: {
+    LABEL: 'Prescriptions',
+    HREF: '/doctor/prescriptions',
+  },
+  DOCTOR_LAB_ORDERS: {
+    LABEL: 'Lab orders',
+    HREF: '/doctor/lab-orders',
+  },
   NURSE: {
     LABEL: 'Nurse',
     HREF: '/nurse',
@@ -100,6 +112,10 @@ export const ROUTES = {
   LAB: {
     LABEL: 'Diagnostic lab',
     HREF: '/lab',
+  },
+  LAB_ORDERS: {
+    LABEL: 'Lab orders',
+    HREF: '/lab/orders',
   },
   PATIENT: {
     LABEL: 'My health',

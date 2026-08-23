@@ -6,12 +6,14 @@ communication in one platform, with role-based dashboards for **administrators**
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 
-> **Current state: steps 0–9 of 27 complete.** The toolchain, the design system, the public landing page, the
+> **Current state: steps 0–12 of 27 complete.** The toolchain, the design system, the public landing page, the
 > validated environment, the result/error layer, the SEO surface, the whole data model, credential sign-in,
 > the role-scoped dashboard shell, admin staff-account management, the departments and service catalogue, the
-> patient registry with medical record numbers, doctor availability with conflict detection, and appointment
-> booking with a live queue are in place. Everything below marked _(from step N)_ describes a convention this
-> project follows but has not reached yet; see [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
+> patient registry with medical record numbers, doctor availability with conflict detection, appointment
+> booking with a live queue, the encounter/EMR record with a relationship-gated patient timeline, immutable
+> digital prescriptions with a printable sheet, and diagnostic lab orders and reports with GridFS file
+> upload/download are in place. Everything below marked _(from step N)_ describes a convention this project
+> follows but has not reached yet; see [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
 
 ---
 
@@ -109,13 +111,14 @@ Open [http://localhost:3000](http://localhost:3000).
 cp .env.example .env.local
 ```
 
-| Variable         | Required                  | Notes                                                                |
-| ---------------- | ------------------------- | -------------------------------------------------------------------- |
-| `LOG_LEVEL`      | No, defaults `info`       | `fatal` · `error` · `warn` · `info` · `debug` · `trace`              |
-| `APP_BASE_URL`   | No, defaults to localhost | Absolute origin — canonical, sitemap and OG URLs use it (step 2)     |
-| `ROBOTS_ENABLED` | No, defaults `false`      | Set `true` on production only; anything else stays out of the index  |
-| `MONGODB_URI`    | **Yes**                   | Local or Atlas. The database name is set in code, not read from this |
-| `AUTH_SECRET`    | **Yes**                   | At least 32 random characters — `openssl rand -base64 32`            |
+| Variable            | Required                  | Notes                                                                                             |
+| ------------------- | ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `LOG_LEVEL`         | No, defaults `info`       | `fatal` · `error` · `warn` · `info` · `debug` · `trace`                                           |
+| `APP_BASE_URL`      | No, defaults to localhost | Absolute origin — canonical, sitemap and OG URLs use it (step 2)                                  |
+| `ROBOTS_ENABLED`    | No, defaults `false`      | Set `true` on production only; anything else stays out of the index                               |
+| `MONGODB_URI`       | **Yes**                   | Local or Atlas. The database name is set in code, not read from this                              |
+| `AUTH_SECRET`       | **Yes**                   | At least 32 random characters — `openssl rand -base64 32`                                         |
+| `STORAGE_CAP_BYTES` | No, defaults 1 GiB        | Total the GridFS lab-report bucket may hold; the upload quota guard measures against it (step 12) |
 
 Every variable is declared in [env/server.ts](env/server.ts) and validated with zod. That module is imported
 by [next.config.ts](next.config.ts), so an invalid value **fails the build** rather than surfacing on some
@@ -139,28 +142,32 @@ For the three variables that **have a default**, a blank value is read as absenc
 
 ## Scripts
 
-| Script                          | Description                                                                      |
-| ------------------------------- | -------------------------------------------------------------------------------- |
-| `npm run dev`                   | Start the dev server                                                             |
-| `npm run build`                 | Production build (`output: 'standalone'`)                                        |
-| `npm run start`                 | Serve the production build                                                       |
-| `npm run lint`                  | ESLint — import order, cspell, canonical classes, Prettier                       |
-| `npm run lint:fix`              | ESLint with `--fix`                                                              |
-| `npm run format`                | Prettier check                                                                   |
-| `npm run format:write`          | Prettier write                                                                   |
-| `npm run seed:super-admin`      | Create the super administrator (see below)                                       |
-| `npm run verify:data-model`     | Exercise the identity and directory models, then clean up                        |
-| `npm run verify:clinical-model` | Exercise the scheduling and clinical models, then clean up                       |
-| `npm run verify:auth`           | Exercise the session token and credential refusals, then clean up                |
-| `npm run verify:users`          | Exercise the staff-account rules against the database, then clean up             |
-| `npm run verify:departments`    | Exercise the department rules (head, uniqueness, delete guard), then clean up    |
-| `npm run verify:services`       | Exercise the service catalogue and money handling, then clean up                 |
-| `npm run verify:patients`       | Exercise registration, the atomic record-number issuer and search, then clean up |
-| `npm run verify:availability`   | Exercise the doctor/room clash checks and slot expansion, then clean up          |
-| `npm run verify:appointments`   | Exercise booking, the double-booking race, tokens and the queue, then clean up   |
+| Script                          | Description                                                                         |
+| ------------------------------- | ----------------------------------------------------------------------------------- |
+| `npm run dev`                   | Start the dev server                                                                |
+| `npm run build`                 | Production build (`output: 'standalone'`)                                           |
+| `npm run start`                 | Serve the production build                                                          |
+| `npm run lint`                  | ESLint — import order, cspell, canonical classes, Prettier                          |
+| `npm run lint:fix`              | ESLint with `--fix`                                                                 |
+| `npm run format`                | Prettier check                                                                      |
+| `npm run format:write`          | Prettier write                                                                      |
+| `npm run seed:super-admin`      | Create the super administrator (see below)                                          |
+| `npm run verify:data-model`     | Exercise the identity and directory models, then clean up                           |
+| `npm run verify:clinical-model` | Exercise the scheduling and clinical models, then clean up                          |
+| `npm run verify:auth`           | Exercise the session token and credential refusals, then clean up                   |
+| `npm run verify:users`          | Exercise the staff-account rules against the database, then clean up                |
+| `npm run verify:departments`    | Exercise the department rules (head, uniqueness, delete guard), then clean up       |
+| `npm run verify:services`       | Exercise the service catalogue and money handling, then clean up                    |
+| `npm run verify:patients`       | Exercise registration, the atomic record-number issuer and search, then clean up    |
+| `npm run verify:availability`   | Exercise the doctor/room clash checks and slot expansion, then clean up             |
+| `npm run verify:appointments`   | Exercise booking, the double-booking race, tokens and the queue, then clean up      |
+| `npm run verify:encounters`     | Exercise relationship-gated access and the append-only encounter, then clean up     |
+| `npm run verify:prescriptions`  | Exercise issue-from-open-encounter, immutability and supersede, then clean up       |
+| `npm run verify:lab`            | Exercise the magic-number check, the access matrix and GridFS upload, then clean up |
 
-The remaining `verify:*` scripts arrive with the services they exercise. Both of the above write to and delete
-from the database `MONGODB_URI` points at. Every fixture is tagged with a run-scoped suffix and removed in a
+The remaining `verify:*` scripts arrive with the services they exercise. Each writes to and deletes
+from the database `MONGODB_URI` points at (the lab script also writes to and clears its GridFS bucket). Every
+fixture is tagged with a run-scoped suffix and removed in a
 `finally` block, and the removal is itself asserted — but they run against a real cluster, which is worth
 knowing before running them anywhere that matters.
 

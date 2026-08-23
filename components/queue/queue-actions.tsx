@@ -1,6 +1,6 @@
 'use client';
 
-import { CircleCheck, LogIn, Play, UserX } from 'lucide-react';
+import { LogIn, Play, Stethoscope, UserX } from 'lucide-react';
 
 import { APPOINTMENT_STATUSES } from '@/constants/appointment.const';
 
@@ -10,9 +10,10 @@ import type { QueueActionsProps } from './queue.types';
 
 /*
   The buttons for one row. Which appear is a function of where the row sits and, in the queue, of
-  how far the visit has got: a checked-in patient can be called in, one already in consultation can
-  be closed. The screen owns the transition and the handlers — like the staff screen — so these
-  only disable while it works and hand the row back when clicked.
+  how far the visit has got: a checked-in patient is started — the doctor opens the consultation
+  record — and one already in consultation is resumed into that record, where the visit is
+  documented and completed. The screen owns the navigation and the handlers, so these only disable
+  while it works and hand the row back when clicked.
 */
 export function QueueActions(props: QueueActionsProps) {
   if (props.context === 'waiting') {
@@ -32,30 +33,29 @@ export function QueueActions(props: QueueActionsProps) {
     );
   }
 
-  // A nurse watches the live queue but does not move it — that is the doctor's to work.
+  // A nurse watches the live queue but does not work it — the consultation is the doctor's to open.
   if (props.role !== 'doctor') {
     return null;
   }
 
-  const { entry, isWorking, onStart, onComplete } = props;
+  const { entry, isWorking, onOpenConsultation } = props;
 
-  if (entry.status === APPOINTMENT_STATUSES.CHECKED_IN) {
+  // In consultation with a record already open: resume into it. The chief button is "resume", so the
+  // doctor returns to exactly where they left the notes rather than starting over.
+  if (entry.status === APPOINTMENT_STATUSES.IN_CONSULTATION && entry.encounterId) {
     return (
-      <Button type="button" size="sm" className="shrink-0" disabled={isWorking} onClick={() => onStart(entry)}>
-        <Play className="size-4" />
-        Start consultation
+      <Button type="button" size="sm" variant="outline" className="shrink-0" disabled={isWorking} onClick={() => onOpenConsultation(entry)}>
+        <Stethoscope className="size-4" />
+        Resume consultation
       </Button>
     );
   }
 
-  if (entry.status === APPOINTMENT_STATUSES.IN_CONSULTATION) {
-    return (
-      <Button type="button" size="sm" variant="outline" className="shrink-0" disabled={isWorking} onClick={() => onComplete(entry)}>
-        <CircleCheck className="size-4" />
-        Complete
-      </Button>
-    );
-  }
-
-  return null;
+  // Checked in — or in consultation with no record yet — so the doctor opens the consultation.
+  return (
+    <Button type="button" size="sm" className="shrink-0" disabled={isWorking} onClick={() => onOpenConsultation(entry)}>
+      <Play className="size-4" />
+      Start consultation
+    </Button>
+  );
 }

@@ -21,6 +21,9 @@
     "verify:patients": "tsx --env-file-if-exists=.env.local scripts/verify-patient-service.ts",
     "verify:availability": "tsx --env-file-if-exists=.env.local scripts/verify-availability-service.ts",
     "verify:appointments": "tsx --env-file-if-exists=.env.local scripts/verify-appointment-service.ts",
+    "verify:encounters": "tsx --env-file-if-exists=.env.local scripts/verify-encounter-service.ts",
+    "verify:prescriptions": "tsx --env-file-if-exists=.env.local scripts/verify-prescription-service.ts",
+    "verify:lab": "tsx --env-file-if-exists=.env.local scripts/verify-lab-service.ts",
     "prepare": "husky"
   },
   "dependencies": {

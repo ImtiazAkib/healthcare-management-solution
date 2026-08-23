@@ -53,52 +53,6 @@ export async function checkInAction(values: unknown): Promise<SingleResult<Appoi
 }
 
 /**
- * Call the next patient in — the doctor starts the consultation.
- *
- * @param values - Raw values carrying the appointment id and the new status.
- *
- * @returns The updated appointment, or a failure carrying the reason.
- */
-export async function startConsultationAction(values: unknown): Promise<SingleResult<AppointmentDto>> {
-  const gate = await gateRoles<AppointmentDto>([USER_ROLES.DOCTOR]);
-
-  if (!gate.allowed) {
-    return gate.refusal;
-  }
-
-  const validation = AppointmentStatusSchema.safeParse(values);
-
-  if (!validation.success) {
-    return singleFailureWithErrors(mapZodErrorsToErrorDto(validation.error));
-  }
-
-  return appointmentService.changeStatus({ ...validation.data, status: APPOINTMENT_STATUSES.IN_CONSULTATION }, gate.requester.userId);
-}
-
-/**
- * Close a consultation — the doctor marks the visit complete and the patient leaves the queue.
- *
- * @param values - Raw values carrying the appointment id and the new status.
- *
- * @returns The updated appointment, or a failure carrying the reason.
- */
-export async function completeConsultationAction(values: unknown): Promise<SingleResult<AppointmentDto>> {
-  const gate = await gateRoles<AppointmentDto>([USER_ROLES.DOCTOR]);
-
-  if (!gate.allowed) {
-    return gate.refusal;
-  }
-
-  const validation = AppointmentStatusSchema.safeParse(values);
-
-  if (!validation.success) {
-    return singleFailureWithErrors(mapZodErrorsToErrorDto(validation.error));
-  }
-
-  return appointmentService.changeStatus({ ...validation.data, status: APPOINTMENT_STATUSES.COMPLETED }, gate.requester.userId);
-}
-
-/**
  * Mark a booked patient a no-show — they never arrived, so the slot they held is released.
  *
  * A nurse's move (an administrator may stand in).

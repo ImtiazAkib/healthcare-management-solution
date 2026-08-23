@@ -69,3 +69,9 @@ export const EncounterAddendumSchema = z.object({
 
 export type EncounterAddendumInput = z.input<typeof EncounterAddendumSchema>;
 export type EncounterAddendumOutput = z.output<typeof EncounterAddendumSchema>;
+
+/** Completing an encounter — an id and nothing else; which move is legal is the service's rule. */
+export const EncounterCompleteSchema = z.object({ encounterId: objectIdField });
+
+export type EncounterCompleteInput = z.input<typeof EncounterCompleteSchema>;
+export type EncounterCompleteOutput = z.output<typeof EncounterCompleteSchema>;
