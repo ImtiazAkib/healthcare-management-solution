@@ -5,6 +5,7 @@ import { Patient } from '@/models/patient.model';
 import { User } from '@/models/user.model';
 import { EncounterDto, PatientDetailDto, PatientSummaryDto, SessionUser, encounterFromEntity, patientSummaryFromEntities } from '@/types';
 
+import { AUDIT_ACTIONS, AUDIT_ENTITIES, AUDIT_OUTCOMES } from '@/constants/audit.const';
 import { CODES } from '@/constants/codes.const';
 
 import { createLoggerWithContext } from '@/lib/logger';
@@ -12,6 +13,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { ListResult, SingleResult, createError, listFailure, listSuccess, singleFailure } from '@/lib/result';
 import { toId } from '@/lib/utils';
 
+import { AuditService } from './audit.service';
 import { DoctorService } from './doctor.service';
 import { PatientService } from './patient.service';
 
@@ -44,6 +46,7 @@ export type TimelineEntry = EncounterDto & {
 export class MedicalRecordService {
   private readonly doctors = new DoctorService();
   private readonly patients = new PatientService();
+  private readonly audit = new AuditService();
 
   /**
    * The patients a doctor has a record with, newest interaction first, optionally searched.
@@ -115,8 +118,25 @@ export class MedicalRecordService {
       }
 
       if (!(await this.isRelatedToPatient(doctorId, patientId))) {
+        // A refused access is recorded as much as a granted one — an attempt on a stranger's record is exactly what a trail is for.
+        await this.audit.record({
+          actor: requester,
+          action: AUDIT_ACTIONS.VIEW,
+          entity: AUDIT_ENTITIES.PATIENT,
+          entityId: patientId,
+          outcome: AUDIT_OUTCOMES.REFUSED,
+        });
+
         return singleFailure(createError(BUSINESS.NOT_YOUR_PATIENT.CODE, BUSINESS.NOT_YOUR_PATIENT.MESSAGE));
       }
+
+      await this.audit.record({
+        actor: requester,
+        action: AUDIT_ACTIONS.VIEW,
+        entity: AUDIT_ENTITIES.PATIENT,
+        entityId: patientId,
+        outcome: AUDIT_OUTCOMES.GRANTED,
+      });
 
       return this.patients.getDetail(patientId);
     } catch (error) {
@@ -144,8 +164,24 @@ export class MedicalRecordService {
       }
 
       if (!(await this.isRelatedToPatient(doctorId, patientId))) {
+        await this.audit.record({
+          actor: requester,
+          action: AUDIT_ACTIONS.VIEW,
+          entity: AUDIT_ENTITIES.TIMELINE,
+          entityId: patientId,
+          outcome: AUDIT_OUTCOMES.REFUSED,
+        });
+
         return listFailure(createError(BUSINESS.NOT_YOUR_PATIENT.CODE, BUSINESS.NOT_YOUR_PATIENT.MESSAGE));
       }
+
+      await this.audit.record({
+        actor: requester,
+        action: AUDIT_ACTIONS.VIEW,
+        entity: AUDIT_ENTITIES.TIMELINE,
+        entityId: patientId,
+        outcome: AUDIT_OUTCOMES.GRANTED,
+      });
 
       const encounters = await Encounter.find({ patient: patientId }).sort({ createdAt: -1 }).lean<EncounterEntity[]>();
       const entries = await this.withDoctorNames(encounters);

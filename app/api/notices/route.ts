@@ -4,12 +4,21 @@ import type { NextRequest } from 'next/server';
 import { CODES, USER_ROLES } from '@/constants';
 
 import { NOTICE_IMAGE } from '@/constants/notice.const';
+import { RATE_LIMIT } from '@/constants/rate-limit.const';
 
-import { contentLengthExceeds, isSameOriginRequest, withForbidden, withOk, withPayloadTooLarge, withUnauthorized } from '@/lib/api';
+import {
+  contentLengthExceeds,
+  isSameOriginRequest,
+  withForbidden,
+  withOk,
+  withPayloadTooLarge,
+  withTooManyRequests,
+  withUnauthorized,
+} from '@/lib/api';
 import { getSessionUser } from '@/lib/auth';
 import { isSuccess } from '@/lib/result';
 import { NoticeCreateSchema } from '@/lib/schemas';
-import { NoticeService } from '@/lib/services';
+import { NoticeService, consumeRateLimit } from '@/lib/services';
 import { mapZodErrorsToErrorDto } from '@/lib/utils';
 
 const noticeService = new NoticeService();
@@ -38,6 +47,11 @@ export async function POST(request: NextRequest) {
   // The hospital publishes notices; administration owns that. Nobody else.
   if (sessionUser.role !== USER_ROLES.ADMIN && sessionUser.role !== USER_ROLES.SUPER_ADMIN) {
     return withForbidden();
+  }
+
+  // The same per-account upload budget the lab reports use — a notice may carry an image too.
+  if (!(await consumeRateLimit('upload', sessionUser.userId, RATE_LIMIT.UPLOAD))) {
+    return withTooManyRequests();
   }
 
   // Refuse an obviously-too-large body from its declared length, before a byte is buffered.

@@ -102,6 +102,20 @@ export const env = createEnv({
     SMS_ACCOUNT_SID: blankAsAbsent(z.string().min(1).optional()),
     SMS_AUTH_TOKEN: blankAsAbsent(z.string().min(1).optional()),
     SMS_FROM: blankAsAbsent(z.string().min(1).optional()),
+
+    /*
+      Whether the deployment sits behind a proxy that is trusted to set `X-Forwarded-For`. Off by
+      default, because a wrong "yes" is worse than a wrong "no": trusting the header when nothing sets
+      it lets a client forge its own address, which would let one attacker wear many callers past the
+      per-caller rate limits and forge the address in the audit log. Turn it on only with a proxy
+      (Vercel, or an nginx configured to set it) — see the README's hardening note.
+    */
+    TRUSTED_PROXY: blankAsAbsent(
+      z
+        .enum(['true', 'false'])
+        .default('false')
+        .transform(value => value === 'true')
+    ),
   },
   experimental__runtimeEnv: process.env,
 });

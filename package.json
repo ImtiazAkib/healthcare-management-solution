@@ -30,6 +30,9 @@
     "verify:profile": "tsx --env-file-if-exists=.env.local scripts/verify-profile-service.ts",
     "verify:notices": "tsx --env-file-if-exists=.env.local scripts/verify-notice-service.ts",
     "verify:notifications": "tsx --env-file-if-exists=.env.local scripts/verify-notification-service.ts",
+    "verify:billing": "tsx --env-file-if-exists=.env.local scripts/verify-billing-service.ts",
+    "verify:analytics": "tsx --env-file-if-exists=.env.local scripts/verify-analytics-service.ts",
+    "verify:hardening": "tsx --env-file-if-exists=.env.local scripts/verify-hardening-service.ts",
     "reminders:run": "tsx --env-file-if-exists=.env.local scripts/run-reminders.ts",
     "prepare": "husky"
   },

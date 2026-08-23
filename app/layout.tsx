@@ -4,9 +4,10 @@ import { Inter, Poppins } from 'next/font/google';
 
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 
-import { APP_DATA, SEO } from '@/constants';
+import { APP_DATA, SEO, THEMES } from '@/constants';
 import { env } from '@/env/server';
 
+import { readTheme } from '@/lib/theme/read-theme';
 import { buildAbsoluteUrl, cn } from '@/lib/utils';
 
 import { SkipToContent } from '@/components/shared';
@@ -78,14 +79,28 @@ export const viewport: Viewport = {
   sidebar, `(auth)` neither — because a dashboard nested inside the marketing header would
   inherit navigation it has no use for.
 */
-export default function RootLayout({ children }: RootLayoutProps) {
+export default async function RootLayout({ children }: RootLayoutProps) {
+  /*
+    Read the stored choice here so the correct class ships on <html> from the first byte —
+    no blocking script, no flash of the wrong theme. "light"/"dark" pin an explicit override;
+    "system" applies no class, leaving the `prefers-color-scheme` cascade to follow the device.
+  */
+  const theme = await readTheme();
+
   return (
     /*
       The font variables sit on <html>, not <body>. `--font-body` is declared on <html> too,
       and a custom property resolves against the element that declares it — so if the faces
       were declared one level down, the indirection in globals.css would resolve to nothing.
+
+      `suppressHydrationWarning` because the theme selector flips this same class imperatively
+      on <html>; the attribute keeps that client-side edit from being reported as a mismatch.
     */
-    <html lang="en" data-scroll-behavior="smooth" className={cn(inter.variable, poppins.variable)}>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+      className={cn(inter.variable, poppins.variable, theme === THEMES.DARK && 'dark', theme === THEMES.LIGHT && 'light')}>
       <body className="font-sans antialiased">
         {/* First in the tab order, before anything else, so it is reachable on the first press of Tab. */}
         <SkipToContent />

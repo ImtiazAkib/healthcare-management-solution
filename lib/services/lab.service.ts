@@ -6,6 +6,7 @@ import { Patient } from '@/models/patient.model';
 import { User } from '@/models/user.model';
 import { LabOrderDto, LabReportDto, LabStatus, SessionUser, labOrderFromEntity, labReportFromEntity } from '@/types';
 
+import { AUDIT_ACTIONS, AUDIT_ENTITIES, AUDIT_OUTCOMES } from '@/constants/audit.const';
 import { CODES } from '@/constants/codes.const';
 import { ENCOUNTER_STATUSES } from '@/constants/encounter.const';
 import { LAB_PRIORITIES, LAB_REPORT_MIME_TYPES, LAB_STATUSES } from '@/constants/lab.const';
@@ -22,6 +23,7 @@ import { storage } from '@/lib/storage';
 import type { StoredFileStream } from '@/lib/storage';
 import { fileMatchesDeclaredType, toId } from '@/lib/utils';
 
+import { AuditService } from './audit.service';
 import { NotificationService } from './notification.service';
 import { hasStorageRoomFor } from './storage.guard';
 
@@ -92,6 +94,7 @@ function isDuplicateKeyError(error: unknown): boolean {
 */
 export class LabService {
   private readonly notificationService = new NotificationService();
+  private readonly audit = new AuditService();
 
   /**
    * Raise a lab order from the ordering doctor's own open encounter.
@@ -411,8 +414,24 @@ export class LabService {
 
       const access = await this.loadAccessibleReport(labReportId, requester);
       if (!('report' in access)) {
+        await this.audit.record({
+          actor: requester,
+          action: AUDIT_ACTIONS.VIEW,
+          entity: AUDIT_ENTITIES.LAB_REPORT,
+          entityId: labReportId,
+          outcome: AUDIT_OUTCOMES.REFUSED,
+        });
+
         return access;
       }
+
+      await this.audit.record({
+        actor: requester,
+        action: AUDIT_ACTIONS.VIEW,
+        entity: AUDIT_ENTITIES.LAB_REPORT,
+        entityId: labReportId,
+        outcome: AUDIT_OUTCOMES.GRANTED,
+      });
 
       return singleSuccess(labReportFromEntity(access.report));
     } catch (error) {
@@ -444,6 +463,14 @@ export class LabService {
 
       const access = await this.loadAccessibleReport(labReportId, requester);
       if (!('report' in access)) {
+        await this.audit.record({
+          actor: requester,
+          action: AUDIT_ACTIONS.DOWNLOAD,
+          entity: AUDIT_ENTITIES.LAB_REPORT,
+          entityId: labReportId,
+          outcome: AUDIT_OUTCOMES.REFUSED,
+        });
+
         return this.reportNotFound();
       }
 
@@ -457,6 +484,14 @@ export class LabService {
         // The row outlived its bytes — report it as gone rather than as a broken download.
         return this.reportNotFound();
       }
+
+      await this.audit.record({
+        actor: requester,
+        action: AUDIT_ACTIONS.DOWNLOAD,
+        entity: AUDIT_ENTITIES.LAB_REPORT,
+        entityId: labReportId,
+        outcome: AUDIT_OUTCOMES.GRANTED,
+      });
 
       return singleSuccess(stream);
     } catch (error) {
