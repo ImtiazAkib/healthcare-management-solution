@@ -42,9 +42,9 @@ in a working state.
 | [10](#step-10)   | Encounters & medical records (EMR)      | Phase 4        | ✅ Done        |
 | [11](#step-11)   | Digital prescriptions                   | Phase 4        | ✅ Done        |
 | [12](#step-12)   | Diagnostics — lab orders & reports      | Phase 4        | ✅ Done        |
-| [13](#step-13)   | Patient portal                          | Phase 4        | ⬜ Not started |
-| [14](#step-14)   | Nurse workspace — triage & vitals       | Phase 4        | ⬜ Not started |
-| [15](#step-15)   | Accounts — registration & email         | Phase 5        | ⬜ Not started |
+| [13](#step-13)   | Patient portal                          | Phase 4        | ✅ Done        |
+| [14](#step-14)   | Nurse workspace — triage & vitals       | Phase 4        | ✅ Done        |
+| [15](#step-15)   | Accounts — registration & email         | Phase 5        | ✅ Done        |
 | [16](#step-16)   | Profiles                                | Phase 5        | ⬜ Not started |
 | [17](#step-17)   | Notices & announcements                 | Phase 5        | ⬜ Not started |
 | [18](#step-18)   | Notifications, reminders & alerts       | Phase 5        | ⬜ Not started |
@@ -1659,7 +1659,7 @@ route handlers.
 
 <a id="step-13"></a>
 
-### Step 13 — Patient portal
+### Step 13 — Patient portal ✅ Done
 
 **Goal.** Everything a patient is entitled to see, and nothing else — plus the one thing they can do:
 book an appointment.
@@ -1698,16 +1698,33 @@ constants/codes-portal.const.ts
 - The dashboard shows the next appointment, the newest report, the newest prescription and any active
   reminder. Nothing on it is a number without a name.
 
-**Acceptance.** A patient signs in and sees only their own records; every list is empty for a second patient
-with no history; booking from the portal takes a real slot and shows up in the doctor's list; another
-patient's prescription id, report id and encounter id each return 404; an unreleased report is absent; the
-patient area has no route that accepts an identifier from the query string.
+**Acceptance.** ✅ Verified. `npm run verify:portal` — **12 checks, all green**, fixtures torn down — proves the
+rule the whole surface rests on: **every read is scoped from the session, never a parameter.** A patient sees
+only their own appointments, completed encounters, issued prescriptions and released reports; an unreleased
+report is invisible; and another patient's prescription id is answered as **not-found**, the same answer a
+missing one gets. Booking pins the patient from the session and re-checks the slot; the directory publishes no
+personal detail. `npm run build` compiles; the patient area has no route that takes an identifier from a query
+string. An adversarial security review of the session-scoping found nothing.
+
+**Deviations.**
+
+- **`PatientPortalService` is a self-contained read facade** (mirroring the reference project's student portal)
+  that resolves the current patient from the session and scopes every read to it, rather than scattering
+  patient-scoped variants across the owning services. `PatientService.findByUser` was added as the session→patient
+  resolver.
+- **Self-booking pins the patient and resolves the department server-side.** `AppointmentSelfBookSchema` carries
+  no `patientId` and no `departmentId` — the portal supplies the patient from the session and derives the
+  department from the doctor, so a request cannot name whom the booking is for. The step-9 `SlotPicker` was
+  parameterised with a `fetchSlots` action so the patient's picker runs through a patient-gated action.
+- The portal earns one small code file (`codes-portal.const.ts`, feature digit 9) for the single refusal its
+  reads cannot borrow — the signed-in account has no patient record; every other read raises the owning
+  feature's own codes.
 
 ---
 
 <a id="step-14"></a>
 
-### Step 14 — Nurse workspace: triage and vitals
+### Step 14 — Nurse workspace: triage and vitals ✅ Done
 
 **Goal.** The first five minutes of a visit — check-in, vitals, triage priority — done by the person who
 actually does them.
@@ -1742,16 +1759,30 @@ lib/utils/vitals.utils.ts   ranges, BMI, out-of-range flagging
 - Vitals attach to the appointment before the encounter exists, and the encounter reads them. That ordering is
   why vitals are embedded on the encounter as a value object with their own recorder and timestamp.
 
-**Acceptance.** A nurse checks a patient in, records vitals and sets a triage priority; the doctor's encounter
-screen shows those vitals without re-entry; an emergency priority moves the patient up the queue; a
-temperature of 986 is refused; a nurse attempting to write a diagnosis through a hand-built request is refused
-by the service.
+**Acceptance.** ✅ Verified. `npm run verify:vitals` — **11 checks, all green**, fixtures torn down — proves the
+write path steps 9/10 left open: a nurse records vitals **stamped with who took them and when**, refused on a
+booking that has not arrived; a temperature of 986 is refused at the schema; and setting an **emergency**
+priority puts that patient **ahead of a lower-token routine patient** in the live queue. The nurse's vitals and
+triage writes gate to the nurse, while the clinical writers (diagnosis, prescription, lab order) gate to the
+doctor and refuse a nurse in the service — the boundary is the service's, not a hidden button. The doctor's
+encounter screen reads the same vitals without re-entry.
+
+**Deviations.**
+
+- **The whole data model was already built** (steps 9/10): the embedded vitals value-object with its recorder
+  and timestamp, the triage priority, the plausible ranges, and the queue sort that already orders by triage.
+  Step 14 is the **write services** (`vitals.service.ts`, `triage.service.ts`, codes at `x42xx`), the nurse-gated
+  actions, and the UI — the reorder is live the moment a priority is written.
+- **Triage gained provenance.** The plan asks that triage be "recorded with who set it", so `triagedBy` /
+  `triagedAt` were added to the appointment (parallel to the vitals' recorder), the DTO, and the write.
+- **The vitals entry point is the queue**: a checked-in queue row carries a "Record vitals" control to the
+  vitals screen, rather than the nurse hunting for the patient; the nurse also has a read-only patients finder.
 
 ---
 
 <a id="step-15"></a>
 
-### Step 15 — Accounts: self-registration and email verification
+### Step 15 — Accounts: self-registration and email verification ✅ Done
 
 **Goal.** A patient registers themselves, proves their address, and is handed the record reception may already
 have created for them.
@@ -1791,11 +1822,26 @@ constants/codes-registration.const.ts
   this step calls into it.
 - Adds `nodemailer`.
 
-**Acceptance.** A patient registers, receives a link, verifies, waits for approval and then signs in; the
-link works once and not twice; an expired link offers a resend; registering with an address reception already
-holds claims that record and issues no second MRN; neither the resend nor the forgot-password screen
-distinguishes a registered address from an unregistered one; with `MAIL_TRANSPORT=log` the whole flow
-completes using the link from the log.
+**Acceptance.** ✅ Verified. `npm run verify:registration` — **19 checks, all green**, fixtures torn down, walked
+against the default `log` transport (no mail server) — proves the rules the screen cannot vouch for: the
+password is stored **hashed** (never in the clear, verified by comparison); a verification or reset token is
+**single-use** (a second click is refused) and short-lived; registering with an address reception already holds
+**claims that record and mints no second medical record number**; and **resend and forgot-password are
+non-enumerating** — an unknown address gets the same silent success a real one does. An account signs in only
+when verified **and** approved. An adversarial security review of the flow found nothing.
+
+**Deviations.**
+
+- **Tokens live hashed on the `User` row**, not in a side collection — mirroring the reference project — and
+  the password is set only through a hydrated document `save()`, so the model's pre-save hook hashes it (a
+  `findByIdAndUpdate` would skip the hook and write plaintext, so it is never used for a password).
+- **No login ID.** The reference issues one on verification; this app signs in by email, so verification simply
+  confirms the address. The flow lives in its own `registration.service.ts` rather than folded into sign-in, and
+  registration codes take the `x1x` sub-band of the user feature.
+- **`MAIL_TRANSPORT` selects the transport explicitly** (`log` default, `smtp` otherwise), rather than inferring
+  it from the presence of SMTP settings. Links are built from `env.APP_BASE_URL`, never a request `Host`.
+- **Rate limiting is deferred to [step 21a](#step-21a)** as the plan intends; the per-account resend cooldown is
+  built now (derived from the token's own expiry). Adds `nodemailer`.
 
 ---
 

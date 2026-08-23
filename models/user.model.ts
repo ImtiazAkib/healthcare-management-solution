@@ -49,6 +49,16 @@ export type UserAttributes = {
    * which reference range a vitals reading is judged against.
    */
   dateOfBirth?: Date;
+  /*
+    One-time tokens are stored **hashed**, never in the clear — a token in a database dump is not a
+    usable token — and `select: false`, so they are absent unless a lookup asks for them. The
+    verification pair proves an address; the reset pair authorizes a new password. Both are cleared
+    the moment they are used, which is what makes them single-use.
+  */
+  emailVerificationTokenHash?: string;
+  emailVerificationExpiresAt?: Date;
+  passwordResetTokenHash?: string;
+  passwordResetExpiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -81,6 +91,11 @@ const userSchema = new Schema<UserAttributes, UserModel, UserMethods>(
     phone: { type: String, trim: true, maxlength: ACCOUNT_FIELD_LIMITS.PHONE },
     gender: { type: String, enum: Object.values(GENDERS) },
     dateOfBirth: { type: Date },
+    // Hashed, short-lived, single-use tokens — never selected unless a lookup asks. See the attribute.
+    emailVerificationTokenHash: { type: String, select: false },
+    emailVerificationExpiresAt: { type: Date, select: false },
+    passwordResetTokenHash: { type: String, select: false },
+    passwordResetExpiresAt: { type: Date, select: false },
   },
   { timestamps: true }
 );

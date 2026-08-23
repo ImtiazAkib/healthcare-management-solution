@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 
 import { isSuccess } from '@/lib/result';
+import type { ListResult } from '@/lib/result';
 import type { BookableSlot } from '@/lib/services';
 
 import { Button, Spinner } from '@/components/ui';
@@ -11,6 +12,9 @@ import { availableSlotsAction } from './actions';
 
 import type { SelectedSlot } from './appointments.types';
 
+/** How the picker fetches free slots — the admin action by default, a role-gated one when supplied. */
+type FetchSlots = (doctorId: string, date: string, excludeAppointmentId: string | null) => Promise<ListResult<BookableSlot>>;
+
 type SlotPickerProps = {
   doctorId: string;
   date: string;
@@ -18,6 +22,8 @@ type SlotPickerProps = {
   value?: string;
   /** A reschedule passes its own appointment id, so its current slot is offered rather than hidden. */
   excludeAppointmentId?: string;
+  /** The action that fetches slots. Defaults to the admin-gated one; the patient portal passes its own. */
+  fetchSlots?: FetchSlots;
   onSelect: (slot: SelectedSlot) => void;
 };
 
@@ -30,7 +36,7 @@ type SlotPickerProps = {
   response that arrives after the doctor or date has moved on again — the last pick wins, not the
   last request to return.
 */
-export function SlotPicker({ doctorId, date, value, excludeAppointmentId, onSelect }: SlotPickerProps) {
+export function SlotPicker({ doctorId, date, value, excludeAppointmentId, fetchSlots, onSelect }: SlotPickerProps) {
   const [slots, setSlots] = useState<BookableSlot[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -49,7 +55,7 @@ export function SlotPicker({ doctorId, date, value, excludeAppointmentId, onSele
     let active = true;
 
     startTransition(async () => {
-      const result = await availableSlotsAction(doctorId, date, excludeAppointmentId ?? null);
+      const result = await (fetchSlots ?? availableSlotsAction)(doctorId, date, excludeAppointmentId ?? null);
 
       if (!active) {
         return;
@@ -62,7 +68,7 @@ export function SlotPicker({ doctorId, date, value, excludeAppointmentId, onSele
     return () => {
       active = false;
     };
-  }, [doctorId, date, excludeAppointmentId]);
+  }, [doctorId, date, excludeAppointmentId, fetchSlots]);
 
   if (!doctorId || !date) {
     return (

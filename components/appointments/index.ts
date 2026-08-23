@@ -7,3 +7,4 @@ export * from './appointment-status.badge';
 export * from './appointments-screen';
 export * from './appointments-table';
 export * from './appointment-book.form';
+export * from './patient-book.form';
