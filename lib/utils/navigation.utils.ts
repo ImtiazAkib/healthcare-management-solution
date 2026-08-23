@@ -1,6 +1,7 @@
 import type { Route } from 'next';
 
 import {
+  BarChart3,
   Bell,
   Building2,
   CalendarCheck,
@@ -12,6 +13,8 @@ import {
   ListOrdered,
   Megaphone,
   Pill,
+  Receipt,
+  ShieldCheck,
   UsersRound,
 } from 'lucide-react';
 
@@ -58,6 +61,9 @@ export function resolveNavModel(role: UserRole): NavSection[] {
     administration.push({ href: ROUTES.ADMIN_AVAILABILITY.HREF, icon: CalendarClock, label: 'Availability' });
     administration.push({ href: ROUTES.ADMIN_APPOINTMENTS.HREF, icon: CalendarCheck, label: 'Appointments' });
     administration.push({ href: ROUTES.ADMIN_SERVICES.HREF, icon: ClipboardList, label: 'Service catalogue' });
+    administration.push({ href: ROUTES.ADMIN_INVOICES.HREF, icon: Receipt, label: 'Invoices' });
+    administration.push({ href: ROUTES.ADMIN_ANALYTICS.HREF, icon: BarChart3, label: 'Analytics' });
+    administration.push({ href: ROUTES.ADMIN_AUDIT.HREF, icon: ShieldCheck, label: 'Access trail' });
   }
 
   // A doctor's own tools, and a nurse's — the schedule an administrator publishes, and the live queue.
@@ -87,6 +93,7 @@ export function resolveNavModel(role: UserRole): NavSection[] {
     clinical.push({ href: ROUTES.PATIENT_RECORDS.HREF, icon: ClipboardList, label: 'My records' });
     clinical.push({ href: ROUTES.PATIENT_PRESCRIPTIONS.HREF, icon: Pill, label: 'Prescriptions' });
     clinical.push({ href: ROUTES.PATIENT_REPORTS.HREF, icon: FlaskConical, label: 'Test results' });
+    clinical.push({ href: ROUTES.PATIENT_INVOICES.HREF, icon: Receipt, label: 'Billing' });
     clinical.push({ href: ROUTES.PATIENT_DOCTORS.HREF, icon: UsersRound, label: 'Find a doctor' });
   }
 

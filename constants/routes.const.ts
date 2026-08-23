@@ -137,6 +137,22 @@ export const ROUTES = {
     LABEL: 'Publish a notice',
     HREF: '/admin/notices/new',
   },
+  ADMIN_INVOICES: {
+    LABEL: 'Invoices',
+    HREF: '/admin/invoices',
+  },
+  ADMIN_INVOICES_NEW: {
+    LABEL: 'Raise an invoice',
+    HREF: '/admin/invoices/new',
+  },
+  ADMIN_ANALYTICS: {
+    LABEL: 'Analytics',
+    HREF: '/admin/analytics',
+  },
+  ADMIN_AUDIT: {
+    LABEL: 'Access trail',
+    HREF: '/admin/audit',
+  },
   DOCTOR: {
     LABEL: 'Doctor',
     HREF: '/doctor',
@@ -228,6 +244,10 @@ export const ROUTES = {
   PATIENT_NOTICES: {
     LABEL: 'Notices',
     HREF: '/patient/notices',
+  },
+  PATIENT_INVOICES: {
+    LABEL: 'Billing',
+    HREF: '/patient/invoices',
   },
 } as const;
 

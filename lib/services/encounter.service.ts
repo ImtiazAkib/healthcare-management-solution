@@ -4,6 +4,7 @@ import { User } from '@/models/user.model';
 import { EncounterDto, SessionUser, encounterFromEntity } from '@/types';
 
 import { APPOINTMENT_STATUSES } from '@/constants/appointment.const';
+import { AUDIT_ACTIONS, AUDIT_ENTITIES, AUDIT_OUTCOMES } from '@/constants/audit.const';
 import { CODES } from '@/constants/codes.const';
 import { ENCOUNTER_STATUSES } from '@/constants/encounter.const';
 
@@ -14,6 +15,7 @@ import type { EncounterAddendumOutput, EncounterCreateOutput, EncounterUpdateOut
 import { toId } from '@/lib/utils';
 
 import { AppointmentService } from './appointment.service';
+import { AuditService } from './audit.service';
 import { DoctorService } from './doctor.service';
 
 import type { AppointmentEntity } from '@/models/appointment.model';
@@ -62,6 +64,7 @@ function isDuplicateKeyError(error: unknown): boolean {
 export class EncounterService {
   private readonly doctors = new DoctorService();
   private readonly appointments = new AppointmentService();
+  private readonly audit = new AuditService();
 
   /**
    * Open an encounter from a checked-in appointment, and move the appointment into consultation.
@@ -205,8 +208,24 @@ export class EncounterService {
       }
 
       if (!(await this.isRelatedToPatient(doctorId, toId(encounter.patient)))) {
+        await this.audit.record({
+          actor: requester,
+          action: AUDIT_ACTIONS.VIEW,
+          entity: AUDIT_ENTITIES.ENCOUNTER,
+          entityId: encounterId,
+          outcome: AUDIT_OUTCOMES.REFUSED,
+        });
+
         return singleFailure(createError(BUSINESS.NOT_YOUR_PATIENT.CODE, BUSINESS.NOT_YOUR_PATIENT.MESSAGE));
       }
+
+      await this.audit.record({
+        actor: requester,
+        action: AUDIT_ACTIONS.VIEW,
+        entity: AUDIT_ENTITIES.ENCOUNTER,
+        entityId: encounterId,
+        outcome: AUDIT_OUTCOMES.GRANTED,
+      });
 
       const dto = encounterFromEntity(encounter);
       const addenda = await this.withAuthorNames(dto.addenda);

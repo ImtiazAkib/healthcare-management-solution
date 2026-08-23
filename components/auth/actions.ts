@@ -1,19 +1,23 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
+import { env } from '@/env/server';
 import { UserRole } from '@/types';
 
 import { CODES } from '@/constants/codes.const';
+import { RATE_LIMIT } from '@/constants/rate-limit.const';
 import { ROUTES } from '@/constants/routes.const';
 
 import { clearSessionCookie, setSessionCookie } from '@/lib/auth';
 import { SingleResult, createError, isSuccess, singleFailureWithErrors, singleSuccess } from '@/lib/result';
 import { SignInSchema } from '@/lib/schemas';
-import { AuthService } from '@/lib/services';
-import { mapZodErrorsToErrorDto } from '@/lib/utils';
+import { AuthService, consumeRateLimit } from '@/lib/services';
+import { mapZodErrorsToErrorDto, resolveCallerKey } from '@/lib/utils';
 
 const AUTH = CODES.AUTH.USERS;
+const TOO_MANY = CODES.BUSINESS.COMMON.TOO_MANY_REQUESTS;
 
 const authService = new AuthService();
 
@@ -32,6 +36,16 @@ export async function signInAction(values: unknown): Promise<SingleResult<UserRo
 
   if (!validation.success) {
     return singleFailureWithErrors(mapZodErrorsToErrorDto(validation.error));
+  }
+
+  /*
+    A looser cap per caller, on top of the per-identifier failure limit in the service: one machine
+    cannot spray many identifiers to work around a limit that is keyed on each identifier alone. Only
+    meaningful behind a trusted proxy — without one every caller shares the `unknown-caller` bucket.
+  */
+  const caller = resolveCallerKey(await headers(), env.TRUSTED_PROXY);
+  if (!(await consumeRateLimit('sign-in-caller', caller, RATE_LIMIT.SIGN_IN_CALLER))) {
+    return singleFailureWithErrors([createError(TOO_MANY.CODE, TOO_MANY.MESSAGE)]);
   }
 
   const result = await authService.verifyCredentials(validation.data.identifier, validation.data.password);
