@@ -78,6 +78,18 @@ export const env = createEnv({
         .positive()
         .default(1024 * 1024 * 1024)
     ),
+
+    /*
+      Mail. The transport is chosen explicitly rather than inferred: `log` (the default) writes each
+      message to the logger so the whole registration flow can be walked with no mail server, and
+      `smtp` sends it. The SMTP settings are optional because they are only read on the `smtp` path.
+    */
+    MAIL_TRANSPORT: blankAsAbsent(z.enum(['log', 'smtp']).default('log')),
+    SMTP_HOST: blankAsAbsent(z.string().min(1).optional()),
+    SMTP_PORT: blankAsAbsent(z.coerce.number().int().min(1).max(65535).default(587)),
+    SMTP_USER: blankAsAbsent(z.string().min(1).optional()),
+    SMTP_PASSWORD: blankAsAbsent(z.string().min(1).optional()),
+    SMTP_FROM: blankAsAbsent(z.string().min(1).default('CareSync <no-reply@localhost>')),
   },
   experimental__runtimeEnv: process.env,
 });

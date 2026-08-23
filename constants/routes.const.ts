@@ -15,6 +15,30 @@ export const ROUTES = {
     LABEL: 'Sign in',
     HREF: '/sign-in',
   },
+  REGISTER: {
+    LABEL: 'Create an account',
+    HREF: '/register',
+  },
+  REGISTRATION_RECEIVED: {
+    LABEL: 'Check your inbox',
+    HREF: '/registration-received',
+  },
+  VERIFY_EMAIL: {
+    LABEL: 'Confirm your email',
+    HREF: '/verify-email',
+  },
+  RESEND_CONFIRMATION: {
+    LABEL: 'Resend confirmation',
+    HREF: '/resend-confirmation',
+  },
+  FORGOT_PASSWORD: {
+    LABEL: 'Forgot password',
+    HREF: '/forgot-password',
+  },
+  RESET_PASSWORD: {
+    LABEL: 'Reset password',
+    HREF: '/reset-password',
+  },
   UNAUTHORIZED: {
     LABEL: 'Not allowed',
     HREF: '/unauthorized',
@@ -109,6 +133,10 @@ export const ROUTES = {
     LABEL: 'Queue',
     HREF: '/nurse/queue',
   },
+  NURSE_PATIENTS: {
+    LABEL: 'Patients',
+    HREF: '/nurse/patients',
+  },
   LAB: {
     LABEL: 'Diagnostic lab',
     HREF: '/lab',
@@ -120,6 +148,30 @@ export const ROUTES = {
   PATIENT: {
     LABEL: 'My health',
     HREF: '/patient',
+  },
+  PATIENT_APPOINTMENTS: {
+    LABEL: 'Appointments',
+    HREF: '/patient/appointments',
+  },
+  PATIENT_APPOINTMENTS_NEW: {
+    LABEL: 'Book an appointment',
+    HREF: '/patient/appointments/new',
+  },
+  PATIENT_RECORDS: {
+    LABEL: 'My records',
+    HREF: '/patient/records',
+  },
+  PATIENT_PRESCRIPTIONS: {
+    LABEL: 'Prescriptions',
+    HREF: '/patient/prescriptions',
+  },
+  PATIENT_REPORTS: {
+    LABEL: 'Test results',
+    HREF: '/patient/reports',
+  },
+  PATIENT_DOCTORS: {
+    LABEL: 'Find a doctor',
+    HREF: '/patient/doctors',
   },
 } as const;
 

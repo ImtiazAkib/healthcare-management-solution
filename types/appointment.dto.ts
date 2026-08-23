@@ -17,6 +17,8 @@ export type AppointmentDto = {
   tokenNo?: number | null;
   status: AppointmentStatus;
   triagePriority: TriagePriority;
+  triagedById?: string | null;
+  triagedAt?: string | null;
   reason?: string | null;
   vitals?: Vitals | null;
   bookedById: string;
@@ -52,6 +54,8 @@ export function appointmentFromEntity(entity: AppointmentEntity): AppointmentDto
     tokenNo: entity.tokenNo ?? null,
     status: entity.status,
     triagePriority: entity.triagePriority,
+    triagedById: entity.triagedBy ? toId(entity.triagedBy) : null,
+    triagedAt: entity.triagedAt ? entity.triagedAt.toISOString() : null,
     reason: entity.reason ?? null,
     vitals: entity.vitals
       ? {

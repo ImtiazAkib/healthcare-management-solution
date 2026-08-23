@@ -1,6 +1,8 @@
 'use client';
 
-import { LogIn, Play, Stethoscope, UserX } from 'lucide-react';
+import Link from 'next/link';
+
+import { ClipboardPlus, LogIn, Play, Stethoscope, UserX } from 'lucide-react';
 
 import { APPOINTMENT_STATUSES } from '@/constants/appointment.const';
 
@@ -33,12 +35,18 @@ export function QueueActions(props: QueueActionsProps) {
     );
   }
 
-  // A nurse watches the live queue but does not work it — the consultation is the doctor's to open.
-  if (props.role !== 'doctor') {
-    return null;
-  }
+  const { entry, role, isWorking, onOpenConsultation } = props;
 
-  const { entry, isWorking, onOpenConsultation } = props;
+  // A nurse works the live queue by recording each arrival's vitals and triage — the consultation
+  // itself is the doctor's to open, so the nurse's control leads to the vitals screen, not into it.
+  if (role === 'nurse') {
+    return (
+      <Button size="sm" variant="outline" className="shrink-0" nativeButton={false} render={<Link href={`/nurse/vitals/${entry.appointmentId}`} />}>
+        <ClipboardPlus className="size-4" />
+        Record vitals
+      </Button>
+    );
+  }
 
   // In consultation with a record already open: resume into it. The chief button is "resume", so the
   // doctor returns to exactly where they left the notes rather than starting over.

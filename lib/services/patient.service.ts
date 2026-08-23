@@ -205,6 +205,41 @@ export class PatientService {
   }
 
   /**
+   * The patient record behind an account, if there is one.
+   *
+   * How the patient portal resolves the **current** patient — from the session's user id, never from
+   * a URL. A patient account with no clinical record is a "not found", which the portal renders as a
+   * "your record is not set up yet" state rather than an error.
+   *
+   * @param userId - The account id.
+   *
+   * @returns The full detail, or a failure.
+   */
+  public async findByUser(userId: string): Promise<SingleResult<PatientDetailDto>> {
+    try {
+      await connectToDatabase();
+
+      const patient = await Patient.findOne({ user: userId }).lean<PatientEntity | null>();
+
+      if (!patient) {
+        return this.notFound();
+      }
+
+      const account = await User.findById(patient.user).lean<UserEntity | null>();
+
+      if (!account) {
+        return this.notFound();
+      }
+
+      return singleSuccess(patientDetailFromEntities(patient, account));
+    } catch (error) {
+      log.error({ err: error }, 'Reading a patient by account failed');
+
+      return singleFailure(createError(DATABASE.FIND_BY_ID_FAILED.CODE, DATABASE.FIND_BY_ID_FAILED.MESSAGE));
+    }
+  }
+
+  /**
    * Edit a patient's clinical record.
    *
    * The account demographics (name, email) and the record number are not editable here: moving a

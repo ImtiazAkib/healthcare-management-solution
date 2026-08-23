@@ -71,11 +71,21 @@ export function resolveNavModel(role: UserRole): NavSection[] {
 
   if (role === USER_ROLES.NURSE) {
     clinical.push({ href: ROUTES.NURSE_QUEUE.HREF, icon: ListOrdered, label: 'Queue' });
+    clinical.push({ href: ROUTES.NURSE_PATIENTS.HREF, icon: HeartPulse, label: 'Patients' });
   }
 
   // The diagnostic lab works one list — the orders waiting on it.
   if (role === USER_ROLES.LAB) {
     clinical.push({ href: ROUTES.LAB_ORDERS.HREF, icon: FlaskConical, label: 'Lab orders' });
+  }
+
+  // A patient's own portal — their appointments, records, and the one thing they can do: book.
+  if (role === USER_ROLES.PATIENT) {
+    clinical.push({ href: ROUTES.PATIENT_APPOINTMENTS.HREF, icon: CalendarCheck, label: 'Appointments' });
+    clinical.push({ href: ROUTES.PATIENT_RECORDS.HREF, icon: ClipboardList, label: 'My records' });
+    clinical.push({ href: ROUTES.PATIENT_PRESCRIPTIONS.HREF, icon: Pill, label: 'Prescriptions' });
+    clinical.push({ href: ROUTES.PATIENT_REPORTS.HREF, icon: FlaskConical, label: 'Test results' });
+    clinical.push({ href: ROUTES.PATIENT_DOCTORS.HREF, icon: UsersRound, label: 'Find a doctor' });
   }
 
   const sections: NavSection[] = [

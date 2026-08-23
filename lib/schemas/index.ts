@@ -1,5 +1,8 @@
 export * from './object-id.schema';
 export * from './sign-in.schema';
+export * from './registration.schema';
+export * from './verification-token.schema';
+export * from './password-reset.schema';
 export * from './user-fields.schema';
 export * from './password-change.schema';
 export * from './user-create.schema';
@@ -23,6 +26,7 @@ export * from './availability-update.schema';
 export * from './availability-filters.schema';
 export * from './appointment-create.schema';
 export * from './appointment-reschedule.schema';
+export * from './appointment-self-book.schema';
 export * from './appointment-filters.schema';
 export * from './vitals-record.schema';
 export * from './encounter-create.schema';
