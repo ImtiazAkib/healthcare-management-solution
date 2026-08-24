@@ -4,7 +4,7 @@ import { APP_DATA, ROLE_HOME, ROUTES, SECTION_IDS } from '@/constants';
 
 import { getSessionUser } from '@/lib/auth';
 
-import { AppLogo, Container } from '@/components/shared';
+import { AppLogo, Container, ThemeSelector } from '@/components/shared';
 import { Button } from '@/components/ui';
 
 /*
@@ -50,6 +50,8 @@ export async function SiteHeader() {
               Roadmap
             </a>
           </nav>
+
+          <ThemeSelector />
 
           {sessionUser ? (
             <Button variant="default" size="sm" nativeButton={false} render={<Link href={ROLE_HOME[sessionUser.role]} prefetch={false} />}>

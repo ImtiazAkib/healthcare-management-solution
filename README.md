@@ -6,7 +6,7 @@ communication in one platform, with role-based dashboards for **administrators**
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 
-> **Current state: steps 0–21 of 27 complete.** The toolchain, the design system, the public landing page, the
+> **Current state: steps 0–23 of 27 complete.** The toolchain, the design system, the public landing page, the
 > validated environment, the result/error layer, the SEO surface, the whole data model, credential sign-in,
 > the role-scoped dashboard shell, admin staff-account management, the departments and service catalogue, the
 > patient registry with medical record numbers, doctor availability with conflict detection, appointment
@@ -17,9 +17,10 @@ Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · MongoDB
 > self-service profile with a proof-gated email change, hospital notices targeted by audience with
 > magic-number-checked images, record-first notifications with an idempotent reminder sweep, invoicing and
 > counter payments with server-computed totals, the analytics dashboard aggregated entirely in the database,
-> database-backed rate limiting with an append-only audit trail of clinical reads, and a flash-free three-way
-> theme are in place. Everything below marked _(from step N)_ describes a convention this project follows but
-> has not reached yet; see [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
+> database-backed rate limiting with an append-only audit trail of clinical reads, a flash-free three-way
+> theme, a demo-hospital seed, an end-to-end smoke test across every service, and the deployment and handover
+> documentation are in place. Everything below marked _(from step N)_ describes a convention this project
+> follows but has not reached yet; see [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
 
 ---
 
@@ -163,6 +164,8 @@ For the three variables that **have a default**, a blank value is read as absenc
 | `npm run format`                | Prettier check                                                                         |
 | `npm run format:write`          | Prettier write                                                                         |
 | `npm run seed:super-admin`      | Create the super administrator (see below)                                             |
+| `npm run seed:demo`             | Seed a demo hospital — staff, 20 patients, availability and a day of appointments      |
+| `npm run smoke`                 | Run the end-to-end path across every service (register → … → pay), then clean up       |
 | `npm run verify:data-model`     | Exercise the identity and directory models, then clean up                              |
 | `npm run verify:clinical-model` | Exercise the scheduling and clinical models, then clean up                             |
 | `npm run verify:auth`           | Exercise the session token and credential refusals, then clean up                      |
@@ -658,6 +661,34 @@ npm run build:linux
 ```bash
 pm2 start ecosystem.config.js
 ```
+
+`ecosystem.config.js` runs two processes: the server, and the **appointment reminder sweep** on a
+fifteen-minute cron. The sweep is idempotent — running it twice sends one reminder per appointment — and runs
+through the same toolchain the seed and verify scripts use, so install with a plain `npm ci` (not
+`--omit=dev`), or drop that app and put `npm run reminders:run` in a system crontab instead.
+
+**The reverse proxy must set `X-Forwarded-For`** and [`TRUSTED_PROXY`](#environment) must be `true`, or
+[step 21a](docs/IMPLEMENTATION-PLAN.md#step-21a)'s per-caller rate limits collapse to one shared bucket. On
+Vercel the platform sets the header; behind nginx, add:
+
+```
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
+
+### Production checklist
+
+- `MONGODB_URI` points at a real cluster, `AUTH_SECRET` is freshly generated (`openssl rand -base64 32`).
+- `APP_BASE_URL` is the real origin, `ROBOTS_ENABLED=true`, `TRUSTED_PROXY=true` behind a real proxy.
+- `MAIL_TRANSPORT=smtp` with working credentials (and `SMS_TRANSPORT` if a provider is wired).
+- Seed the one account no screen can make: `npm run seed:super-admin` (see
+  [Seeding the first administrator](#seeding-the-first-administrator)). For a demo instance,
+  `npm run seed:demo` adds a full hospital to click around.
+- The whole system is exercisable against the running database with `npm run smoke` and the `verify:*`
+  scripts.
+
+A visual, offline walkthrough of the system — request lifecycle, the layers a write travels, the data model,
+and the clinical workflow end to end — is in [docs/project-overview.html](docs/project-overview.html); open it
+in a browser.
 
 ## Naming
 
