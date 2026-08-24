@@ -12,6 +12,8 @@
     "format": "prettier **/*.{ts,tsx,js,mjs,html,scss,json,md} --check",
     "format:write": "prettier **/*.{ts,tsx,js,mjs,html,scss,json,md} --write",
     "seed:super-admin": "tsx --env-file-if-exists=.env.local scripts/seed-super-admin.ts",
+    "seed:demo": "tsx --env-file-if-exists=.env.local scripts/seed-demo.ts",
+    "smoke": "tsx --env-file-if-exists=.env.local scripts/smoke-test.ts",
     "verify:data-model": "tsx --env-file-if-exists=.env.local scripts/verify-data-model.ts",
     "verify:clinical-model": "tsx --env-file-if-exists=.env.local scripts/verify-clinical-model.ts",
     "verify:auth": "tsx --env-file-if-exists=.env.local scripts/verify-auth.ts",

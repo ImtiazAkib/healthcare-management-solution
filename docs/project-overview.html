@@ -1,0 +1,1287 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Unified Healthcare Management Solution — Project Overview</title>
+    <style>
+      :root {
+        --bg: #f4f8f8;
+        --card: #ffffff;
+        --text: #1e293b;
+        --muted: #5b6b7c;
+        --border: #dde7e9;
+        --primary: #1f8a8a;
+        --primary-deep: #166e6e;
+        --primary-soft: #e3f2f1;
+        --code-bg: #edf3f4;
+        --node: #f7fbfb;
+        --node-stroke: #b6c9ce;
+        --edge: #7d9199;
+        --group-fill: rgba(31, 138, 138, 0.04);
+        --done-bg: #dcf3ee;
+        --done-fg: #0f766e;
+        --prog-bg: #fdf0dc;
+        --prog-fg: #b45309;
+        --back-bg: #e8edf2;
+        --back-fg: #64748b;
+        --accent-admin: #7c3aed;
+        --accent-doctor: #2563eb;
+        --accent-nurse: #0d9488;
+        --accent-lab: #d97706;
+        --accent-patient: #e11d48;
+        --shadow: 0 1px 2px rgba(30, 41, 59, 0.05), 0 4px 16px rgba(30, 41, 59, 0.05);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e1615;
+          --card: #152020;
+          --text: #e3eaf0;
+          --muted: #93a6ad;
+          --border: #263536;
+          --primary: #2fb8ab;
+          --primary-deep: #4fd8c6;
+          --primary-soft: rgba(45, 212, 191, 0.12);
+          --code-bg: #1c2a2a;
+          --node: #1b2a29;
+          --node-stroke: #3a4f50;
+          --edge: #6f8a90;
+          --group-fill: rgba(45, 212, 191, 0.05);
+          --done-bg: rgba(20, 184, 166, 0.16);
+          --done-fg: #4fd8c6;
+          --prog-bg: rgba(217, 119, 6, 0.18);
+          --prog-fg: #f0a35c;
+          --back-bg: rgba(148, 163, 184, 0.14);
+          --back-fg: #9fb0bf;
+          --accent-admin: #a78bfa;
+          --accent-doctor: #60a5fa;
+          --accent-nurse: #2dd4bf;
+          --accent-lab: #fbbf24;
+          --accent-patient: #fb7185;
+          --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        padding: 5.5rem 1.25rem 3rem;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.65;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      code {
+        font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Consolas, Menlo, monospace;
+        font-size: 0.85em;
+        background: var(--code-bg);
+        border-radius: 4px;
+        padding: 0.1em 0.35em;
+      }
+
+      /* ---- Top bar ---- */
+      .topbar {
+        position: fixed;
+        inset: 0 0 auto 0;
+        z-index: 10;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+      }
+      .topbar-inner {
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 0.7rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .topbar-dot {
+        width: 0.75rem;
+        height: 0.75rem;
+        border-radius: 50%;
+        background: var(--primary);
+        flex: none;
+      }
+      .topbar-title {
+        font-weight: 650;
+        font-size: 0.95rem;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .topbar-nav {
+        margin-left: auto;
+        display: flex;
+        gap: 1.1rem;
+        font-size: 0.82rem;
+      }
+      .topbar-nav a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+      .topbar-nav a:hover {
+        color: var(--primary);
+      }
+      @media (max-width: 860px) {
+        .topbar-nav {
+          display: none;
+        }
+      }
+
+      /* ---- Layout ---- */
+      .wrap {
+        max-width: 72rem;
+        margin: 0 auto;
+      }
+
+      section.card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        padding: 2rem 2.25rem 2.25rem;
+        margin: 0 0 1.75rem;
+        scroll-margin-top: 4.5rem;
+      }
+      @media (max-width: 640px) {
+        section.card {
+          padding: 1.4rem 1.1rem 1.5rem;
+        }
+      }
+
+      h1 {
+        font-size: 2rem;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        margin: 0 0 0.75rem;
+      }
+      h2 {
+        font-size: 1.3rem;
+        letter-spacing: -0.01em;
+        margin: 0 0 0.9rem;
+      }
+      h2 .kicker {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 650;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--primary);
+        margin-bottom: 0.3rem;
+      }
+      p {
+        margin: 0 0 1rem;
+      }
+      p:last-child {
+        margin-bottom: 0;
+      }
+      .lead {
+        font-size: 1.05rem;
+        color: var(--text);
+        max-width: 62rem;
+      }
+      .dim {
+        color: var(--muted);
+      }
+      .small {
+        font-size: 0.86rem;
+      }
+
+      /* ---- Stack chips ---- */
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 1.1rem 0 0.6rem;
+        padding: 0;
+        list-style: none;
+      }
+      .chips li {
+        background: var(--primary-soft);
+        color: var(--primary-deep);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 550;
+        padding: 0.25rem 0.75rem;
+        white-space: nowrap;
+      }
+
+      /* ---- Role cards ---- */
+      .roles {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1.25rem;
+      }
+      .role {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1rem 1.1rem 1.1rem;
+        background: var(--bg);
+      }
+      .role .bar {
+        height: 4px;
+        border-radius: 2px;
+        margin-bottom: 0.75rem;
+      }
+      .role h3 {
+        margin: 0 0 0.4rem;
+        font-size: 0.98rem;
+      }
+      .role p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      /* ---- Figures / SVG ---- */
+      figure {
+        margin: 1.6rem 0 0;
+      }
+      figure svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        margin: 0 auto;
+      }
+      figcaption {
+        margin-top: 0.9rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+        max-width: 60rem;
+      }
+      .fig-lifecycle svg {
+        max-width: 62rem;
+      }
+      .fig-layers svg {
+        max-width: 50rem;
+      }
+      .fig-erd svg {
+        max-width: 70rem;
+      }
+      .fig-flow svg {
+        max-width: 62rem;
+      }
+
+      /* SVG element classes */
+      svg text {
+        font-family: inherit;
+      }
+      .box {
+        fill: var(--node);
+        stroke: var(--node-stroke);
+        stroke-width: 1.2;
+      }
+      .box-hi {
+        fill: var(--primary-soft);
+        stroke: var(--primary);
+        stroke-width: 1.3;
+      }
+      .nt {
+        font-size: 13px;
+        font-weight: 620;
+        fill: var(--text);
+      }
+      .ns {
+        font-size: 10px;
+        fill: var(--muted);
+      }
+      .erd-nt {
+        font-size: 12.5px;
+        font-weight: 620;
+        fill: var(--text);
+      }
+      .erd-ns {
+        font-size: 9.5px;
+        fill: var(--muted);
+      }
+      .edge {
+        stroke: var(--edge);
+        stroke-width: 1.4;
+        fill: none;
+      }
+      .edge-dash {
+        stroke: var(--edge);
+        stroke-width: 1.4;
+        fill: none;
+        stroke-dasharray: 5 4;
+      }
+      .edge-primary {
+        stroke: var(--primary);
+        stroke-width: 1.5;
+        fill: none;
+        stroke-dasharray: 6 4;
+      }
+      .el {
+        font-size: 10px;
+        fill: var(--muted);
+      }
+      .el-primary {
+        font-size: 10.5px;
+        fill: var(--primary-deep);
+      }
+      .cap {
+        font-size: 10.5px;
+        fill: var(--muted);
+      }
+      .grp {
+        fill: var(--group-fill);
+        stroke: var(--border);
+        stroke-width: 1.2;
+        stroke-dasharray: 4 4;
+      }
+      .grp-label {
+        font-size: 11px;
+        font-weight: 650;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        fill: var(--primary);
+      }
+      .numc {
+        fill: var(--primary);
+      }
+      .numt {
+        font-size: 11px;
+        font-weight: 650;
+        fill: #ffffff;
+      }
+
+      /* ---- Guarantees strip ---- */
+      .guarantees {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+        margin-top: 1.4rem;
+      }
+      .guarantee {
+        border-left: 3px solid var(--primary);
+        background: var(--bg);
+        border-radius: 0 8px 8px 0;
+        padding: 0.75rem 1rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      .guarantee strong {
+        color: var(--text);
+        display: block;
+        margin-bottom: 0.2rem;
+      }
+
+      /* ---- Progress table ---- */
+      .table-scroll {
+        overflow-x: auto;
+        margin-top: 1.1rem;
+      }
+      table.progress {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.86rem;
+      }
+      table.progress th,
+      table.progress td {
+        text-align: left;
+        padding: 0.42rem 0.9rem 0.42rem 0;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+        white-space: nowrap;
+      }
+      table.progress td:nth-child(2) {
+        white-space: normal;
+        min-width: 16rem;
+      }
+      table.progress th {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--muted);
+        font-weight: 650;
+      }
+      .badge {
+        display: inline-block;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 620;
+        padding: 0.1rem 0.6rem;
+        line-height: 1.5;
+      }
+      .badge.done {
+        background: var(--done-bg);
+        color: var(--done-fg);
+      }
+      .badge.prog {
+        background: var(--prog-bg);
+        color: var(--prog-fg);
+      }
+      .badge.back {
+        background: var(--back-bg);
+        color: var(--back-fg);
+      }
+
+      /* ---- Footer ---- */
+      footer {
+        max-width: 72rem;
+        margin: 2.5rem auto 0;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <span class="topbar-dot" aria-hidden="true"></span>
+        <span class="topbar-title">Unified Healthcare Management Solution</span>
+        <nav class="topbar-nav" aria-label="Sections">
+          <a href="#roles">Roles</a>
+          <a href="#lifecycle">Lifecycle</a>
+          <a href="#layers">Layers</a>
+          <a href="#data-model">Data model</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#progress">Progress</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <!-- 1 · Title + intro -->
+      <section class="card" id="intro">
+        <h1>Unified Healthcare Management Solution</h1>
+        <p class="lead">
+          A single-facility hospital platform that puts patient records, appointments and the live queue, digital prescriptions, diagnostic lab orders
+          and reports, billing and hospital communication under one roof — with role-based dashboards for administrators, doctors, nurses, diagnostic
+          staff and patients. Every route and action is gated by role, clinical reads are gated by relationship, and a patient's portal always
+          resolves the patient from the session, never from a URL.
+        </p>
+        <ul class="chips" aria-label="Technology stack">
+          <li>Next.js 16 (App Router)</li>
+          <li>React 19</li>
+          <li>TypeScript (strict)</li>
+          <li>Tailwind CSS v4</li>
+          <li>MongoDB + Mongoose</li>
+          <li>jose session JWT</li>
+        </ul>
+        <p class="dim small">English-only · scoped to a single facility · steps 0–21 of the plan complete.</p>
+      </section>
+
+      <!-- 2 · The five roles -->
+      <section class="card" id="roles">
+        <h2>
+          <span class="kicker">Section 2</span>
+          The five roles
+        </h2>
+        <p class="dim">
+          One shell, five dashboards. What each role can see follows from what it is entitled to, not from what happens to be convenient.
+        </p>
+        <div class="roles">
+          <div class="role">
+            <div class="bar" style="background: var(--accent-admin)"></div>
+            <h3>Administrator</h3>
+            <p>
+              Runs the hospital's record of itself — staff accounts, departments, the price list, invoices, analytics and the audit trail. Manages the
+              institution, not its patients' records.
+            </p>
+          </div>
+          <div class="role">
+            <div class="bar" style="background: var(--accent-doctor)"></div>
+            <h3>Doctor</h3>
+            <p>
+              Consults, diagnoses, prescribes and orders tests. Reads a patient's timeline only through an existing clinical relationship — access by
+              relationship, not by role alone.
+            </p>
+          </div>
+          <div class="role">
+            <div class="bar" style="background: var(--accent-nurse)"></div>
+            <h3>Nurse</h3>
+            <p>Checks patients in, records vitals at the door and triages — an urgent case moves ahead of token order in the queue.</p>
+          </div>
+          <div class="role">
+            <div class="bar" style="background: var(--accent-lab)"></div>
+            <h3>Diagnostic lab</h3>
+            <p>
+              Takes the orders addressed to it, uploads the report file and releases the result. Sees its own orders and the reports it produced —
+              nothing else.
+            </p>
+          </div>
+          <div class="role">
+            <div class="bar" style="background: var(--accent-patient)"></div>
+            <h3>Patient</h3>
+            <p>
+              A personal portal: appointments, records, prescriptions, lab results and billing — always their own, resolved from the session and never
+              from a URL.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 · Request lifecycle -->
+      <section class="card" id="lifecycle">
+        <h2>
+          <span class="kicker">Section 3</span>
+          The request lifecycle
+        </h2>
+        <p class="dim">
+          Every request crosses the same checkpoints in the same order, and each hop discharges one security obligation. Nothing downstream has to
+          re-ask a question a hop upstream already answered.
+        </p>
+        <figure class="fig-lifecycle">
+          <svg
+            viewBox="0 0 1000 352"
+            role="img"
+            aria-label="Horizontal flow: Browser to edge middleware to server entry to auth gate, then down to Zod schema, service, Mongoose model and MongoDB, with a Result object flowing back up.">
+            <defs>
+              <marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--edge)" />
+              </marker>
+              <marker id="a1p" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--primary)" />
+              </marker>
+            </defs>
+
+            <!-- Row 1 -->
+            <rect class="box" x="26" y="30" width="210" height="72" rx="10" />
+            <text class="nt" x="131" y="53" text-anchor="middle">Browser</text>
+            <text class="ns" x="131" y="71" text-anchor="middle">signed-in via httpOnly cookie</text>
+            <text class="ns" x="131" y="86" text-anchor="middle">no token readable by page JS</text>
+
+            <rect class="box" x="272" y="30" width="210" height="72" rx="10" />
+            <text class="nt" x="377" y="53" text-anchor="middle">Edge middleware</text>
+            <text class="ns" x="377" y="71" text-anchor="middle">proxy.ts — verifies the signed cookie</text>
+            <text class="ns" x="377" y="86" text-anchor="middle">same-origin check on /api</text>
+
+            <rect class="box" x="518" y="30" width="210" height="72" rx="10" />
+            <text class="nt" x="623" y="53" text-anchor="middle">Server entry</text>
+            <text class="ns" x="623" y="71" text-anchor="middle">Server Component · Route Handler</text>
+            <text class="ns" x="623" y="86" text-anchor="middle">Server Action</text>
+
+            <rect class="box" x="764" y="30" width="210" height="72" rx="10" />
+            <text class="nt" x="869" y="53" text-anchor="middle">Auth gate</text>
+            <text class="ns" x="869" y="71" text-anchor="middle">requireRole · gateRoles</text>
+            <text class="ns" x="869" y="86" text-anchor="middle">gateAdminArea</text>
+
+            <line class="edge" x1="236" y1="66" x2="268" y2="66" marker-end="url(#a1)" />
+            <line class="edge" x1="482" y1="66" x2="514" y2="66" marker-end="url(#a1)" />
+            <line class="edge" x1="728" y1="66" x2="760" y2="66" marker-end="url(#a1)" />
+
+            <text class="cap" x="254" y="122" text-anchor="middle">session cookie verified first</text>
+            <text class="cap" x="254" y="136" text-anchor="middle">(HS256 pinned · payload zod-parsed)</text>
+            <text class="cap" x="500" y="122" text-anchor="middle">unauthenticated visitors are</text>
+            <text class="cap" x="500" y="136" text-anchor="middle">redirected before any code runs</text>
+            <text class="cap" x="746" y="122" text-anchor="middle">wrong role → /unauthorized</text>
+            <text class="cap" x="746" y="136" text-anchor="middle">missing session → sign-in</text>
+
+            <!-- Down connector -->
+            <line class="edge" x1="869" y1="102" x2="869" y2="226" marker-end="url(#a1)" />
+            <text class="cap" x="857" y="158" text-anchor="end">input is untrusted —</text>
+            <text class="cap" x="857" y="172" text-anchor="end">typed unknown until</text>
+            <text class="cap" x="857" y="186" text-anchor="end">the schema parses it</text>
+
+            <!-- Result return -->
+            <line class="edge-primary" x1="131" y1="228" x2="131" y2="108" marker-end="url(#a1p)" />
+            <text class="el-primary" x="142" y="154">Result { success, errors[] }</text>
+            <text class="el-primary" x="142" y="168">flows back up — DTO-mapped,</text>
+            <text class="el-primary" x="142" y="182">success or five-digit codes</text>
+
+            <!-- Row 2 -->
+            <rect class="box" x="764" y="230" width="210" height="72" rx="10" />
+            <text class="nt" x="869" y="253" text-anchor="middle">Zod schema</text>
+            <text class="ns" x="869" y="271" text-anchor="middle">{entity}-{action}.schema.ts</text>
+            <text class="ns" x="869" y="286" text-anchor="middle">refuses malformed input</text>
+
+            <rect class="box" x="518" y="230" width="210" height="72" rx="10" />
+            <text class="nt" x="623" y="253" text-anchor="middle">Service</text>
+            <text class="ns" x="623" y="271" text-anchor="middle">owns the business rules</text>
+            <text class="ns" x="623" y="286" text-anchor="middle">returns a typed Result</text>
+
+            <rect class="box" x="272" y="230" width="210" height="72" rx="10" />
+            <text class="nt" x="377" y="253" text-anchor="middle">Mongoose model</text>
+            <text class="ns" x="377" y="271" text-anchor="middle">pre-save hooks · bounds</text>
+            <text class="ns" x="377" y="286" text-anchor="middle">partial unique indexes</text>
+
+            <rect class="box-hi" x="26" y="230" width="210" height="72" rx="10" />
+            <text class="nt" x="131" y="253" text-anchor="middle">MongoDB</text>
+            <text class="ns" x="131" y="271" text-anchor="middle">dbName pinned in code</text>
+            <text class="ns" x="131" y="286" text-anchor="middle">indexes hold the invariants</text>
+
+            <line class="edge" x1="764" y1="266" x2="732" y2="266" marker-end="url(#a1)" />
+            <line class="edge" x1="518" y1="266" x2="486" y2="266" marker-end="url(#a1)" />
+            <line class="edge" x1="272" y1="266" x2="240" y2="266" marker-end="url(#a1)" />
+
+            <text class="cap" x="746" y="324" text-anchor="middle">only typed, validated</text>
+            <text class="cap" x="746" y="338" text-anchor="middle">values pass</text>
+            <text class="cap" x="500" y="324" text-anchor="middle">refusals return as data —</text>
+            <text class="cap" x="500" y="338" text-anchor="middle">coded errors, never throws</text>
+            <text class="cap" x="254" y="324" text-anchor="middle">double-booking blocked by a</text>
+            <text class="cap" x="254" y="338" text-anchor="middle">partial unique index</text>
+          </svg>
+          <figcaption>
+            The edge answers "is there a session"; the page's gate answers "is it the right one". The proxy never touches the database — it verifies
+            the signature and redirects; revocation is checked by
+            <code>getSessionUser()</code>
+            against the live account on the server. Expected failures travel back as a
+            <code>Result</code>
+            object, never as an exception.
+          </figcaption>
+        </figure>
+      </section>
+
+      <!-- 4 · How a write travels the layers -->
+      <section class="card" id="layers">
+        <h2>
+          <span class="kicker">Section 4</span>
+          How a write travels the layers
+        </h2>
+        <p class="dim">
+          Each layer does one job and refuses to do its neighbour's. The action gates and validates but holds no business logic; the service owns the
+          rules; the model is the last line that can say no.
+        </p>
+        <figure class="fig-layers">
+          <svg
+            viewBox="0 0 790 600"
+            role="img"
+            aria-label="Vertical layered diagram: component, server action, Zod schema, service, Mongoose model, MongoDB — with a typed Result returning up the left side through DTO mappers.">
+            <defs>
+              <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--edge)" />
+              </marker>
+              <marker id="a2p" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--primary)" />
+              </marker>
+            </defs>
+
+            <rect class="box" x="60" y="30" width="320" height="64" rx="10" />
+            <text class="nt" x="220" y="56" text-anchor="middle">Component</text>
+            <text class="ns" x="220" y="76" text-anchor="middle">renders what it is given</text>
+
+            <rect class="box" x="60" y="124" width="320" height="64" rx="10" />
+            <text class="nt" x="220" y="150" text-anchor="middle">Server Action</text>
+            <text class="ns" x="220" y="170" text-anchor="middle">actions.ts — gates + validates, nothing else</text>
+
+            <rect class="box" x="60" y="218" width="320" height="64" rx="10" />
+            <text class="nt" x="220" y="244" text-anchor="middle">Zod schema</text>
+            <text class="ns" x="220" y="264" text-anchor="middle">parses values: unknown into typed input</text>
+
+            <rect class="box" x="60" y="312" width="320" height="64" rx="10" />
+            <text class="nt" x="220" y="338" text-anchor="middle">Service</text>
+            <text class="ns" x="220" y="358" text-anchor="middle">the business rules live here</text>
+
+            <rect class="box" x="60" y="406" width="320" height="64" rx="10" />
+            <text class="nt" x="220" y="432" text-anchor="middle">Mongoose model</text>
+            <text class="ns" x="220" y="452" text-anchor="middle">hooks · bounds · indexes</text>
+
+            <rect class="box-hi" x="60" y="500" width="320" height="64" rx="10" />
+            <text class="nt" x="220" y="526" text-anchor="middle">MongoDB</text>
+            <text class="ns" x="220" y="546" text-anchor="middle">the source of truth</text>
+
+            <line class="edge" x1="220" y1="94" x2="220" y2="120" marker-end="url(#a2)" />
+            <line class="edge" x1="220" y1="188" x2="220" y2="214" marker-end="url(#a2)" />
+            <line class="edge" x1="220" y1="282" x2="220" y2="308" marker-end="url(#a2)" />
+            <line class="edge" x1="220" y1="376" x2="220" y2="402" marker-end="url(#a2)" />
+            <line class="edge" x1="220" y1="470" x2="220" y2="496" marker-end="url(#a2)" />
+
+            <text class="el" x="232" y="112">values: unknown</text>
+            <text class="el" x="232" y="206">schema.parse(values)</text>
+            <text class="el" x="232" y="300">typed input</text>
+            <text class="el" x="232" y="394">commands</text>
+            <text class="el" x="232" y="488">writes</text>
+
+            <!-- Annotations -->
+            <text class="cap" x="404" y="52">the client's form state is a proposal —</text>
+            <text class="cap" x="404" y="68">nothing it sends is trusted</text>
+
+            <text class="cap" x="404" y="138">gates with requireRole / gateRoles /</text>
+            <text class="cap" x="404" y="154">gateAdminArea, then validates — the</text>
+            <text class="cap" x="404" y="170">action does no business logic</text>
+
+            <text class="cap" x="404" y="232">untrusted unknown becomes typed input;</text>
+            <text class="cap" x="404" y="248">every refusal message carries its</text>
+            <text class="cap" x="404" y="264">five-digit error code</text>
+
+            <text class="cap" x="404" y="326">returns SingleResult · ListResult ·</text>
+            <text class="cap" x="404" y="342">EmptyResult — expected failures are</text>
+            <text class="cap" x="404" y="358">data, never exceptions; money is an</text>
+            <text class="cap" x="404" y="374">integer count of minor units</text>
+
+            <text class="cap" x="404" y="420">pre('save') hashes passwords; partial</text>
+            <text class="cap" x="404" y="436">unique indexes hold the invariants</text>
+            <text class="cap" x="404" y="452">(one slot, one super admin)</text>
+
+            <text class="cap" x="404" y="522">database name set in code —</text>
+            <text class="cap" x="404" y="538">never inferred from the URI</text>
+
+            <!-- Return channel -->
+            <path class="edge-primary" d="M 60,532 L 34,532 L 34,62 L 56,62" marker-end="url(#a2p)" />
+            <text class="el-primary" x="20" y="300" text-anchor="middle" transform="rotate(-90 20 300)">
+              typed Result back up — DTO mappers name every field; secrets cannot leak
+            </text>
+          </svg>
+          <figcaption>
+            On the way back up, nothing reaches a component as a Mongoose document: a DTO mapper names every field explicitly, so
+            <code>password</code>
+            , token hashes and storage keys cannot leak by being forgotten. Money stays an integer count of minor units end to end — a float never
+            touches a total.
+          </figcaption>
+        </figure>
+      </section>
+
+      <!-- 5 · The data model -->
+      <section class="card" id="data-model">
+        <h2>
+          <span class="kicker">Section 5</span>
+          The data model
+        </h2>
+        <p class="dim">
+          Eighteen Mongoose models, drawn along one deliberate line:
+          <code>User</code>
+          answers "who is asking" and is read on every sign-in;
+          <code>Patient</code>
+          answers "what is known about them" and is read deliberately. Keeping allergies, conditions and blood group off the account keeps clinical
+          data out of the document the session token is minted from — and is what lets the audit trail treat a clinical read as distinct from an
+          ordinary one.
+        </p>
+        <figure class="fig-erd">
+          <svg
+            viewBox="0 0 1160 810"
+            role="img"
+            aria-label="Entity-relationship diagram of the eighteen models, grouped into platform and identity, clinical and scheduling, and billing.">
+            <defs>
+              <marker id="a3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--edge)" />
+              </marker>
+            </defs>
+
+            <!-- Groups -->
+            <rect class="grp" x="24" y="260" width="222" height="530" rx="12" />
+            <text class="grp-label" x="36" y="284">Platform · identity</text>
+
+            <rect class="grp" x="270" y="30" width="660" height="660" rx="12" />
+            <text class="grp-label" x="282" y="54">Clinical · scheduling</text>
+
+            <rect class="grp" x="950" y="260" width="186" height="430" rx="12" />
+            <text class="grp-label" x="962" y="284">Billing</text>
+
+            <!-- Platform boxes -->
+            <rect class="box" x="60" y="300" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="135" y="319" text-anchor="middle">User</text>
+            <text class="erd-ns" x="135" y="335" text-anchor="middle">role · approval · credentials</text>
+
+            <rect class="box" x="60" y="390" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="135" y="409" text-anchor="middle">Counter</text>
+            <text class="erd-ns" x="135" y="425" text-anchor="middle">atomic MRN sequence</text>
+
+            <rect class="box" x="60" y="470" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="135" y="489" text-anchor="middle">Notification</text>
+            <text class="erd-ns" x="135" y="505" text-anchor="middle">record-first · reminders</text>
+
+            <rect class="box" x="60" y="560" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="135" y="579" text-anchor="middle">AuditLog</text>
+            <text class="erd-ns" x="135" y="595" text-anchor="middle">append-only read trail</text>
+
+            <rect class="box" x="60" y="650" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="135" y="669" text-anchor="middle">Notice</text>
+            <text class="erd-ns" x="135" y="685" text-anchor="middle">audience-targeted posts</text>
+
+            <rect class="box" x="60" y="730" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="135" y="749" text-anchor="middle">RateLimit</text>
+            <text class="erd-ns" x="135" y="765" text-anchor="middle">throttles public routes</text>
+
+            <!-- Clinical boxes -->
+            <rect class="box" x="330" y="70" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="405" y="89" text-anchor="middle">Availability</text>
+            <text class="erd-ns" x="405" y="105" text-anchor="middle">weekly slots · room</text>
+
+            <rect class="box" x="620" y="70" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="695" y="89" text-anchor="middle">Department</text>
+            <text class="erd-ns" x="695" y="105" text-anchor="middle">name · code · head</text>
+
+            <rect class="box" x="330" y="160" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="405" y="179" text-anchor="middle">Doctor</text>
+            <text class="erd-ns" x="405" y="195" text-anchor="middle">specialty · fee · room</text>
+
+            <rect class="box-hi" x="330" y="300" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="405" y="319" text-anchor="middle">Patient</text>
+            <text class="erd-ns" x="405" y="335" text-anchor="middle">MRN · allergies · conditions</text>
+
+            <rect class="box" x="580" y="250" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="655" y="269" text-anchor="middle">Appointment</text>
+            <text class="erd-ns" x="655" y="285" text-anchor="middle">slot · token · vitals</text>
+
+            <rect class="box" x="580" y="400" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="655" y="419" text-anchor="middle">Encounter</text>
+            <text class="erd-ns" x="655" y="435" text-anchor="middle">diagnoses · addenda</text>
+
+            <rect class="box" x="400" y="530" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="475" y="549" text-anchor="middle">Prescription</text>
+            <text class="erd-ns" x="475" y="565" text-anchor="middle">immutable · supersedable</text>
+
+            <rect class="box" x="760" y="530" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="835" y="549" text-anchor="middle">LabOrder</text>
+            <text class="erd-ns" x="835" y="565" text-anchor="middle">tests · priority · status</text>
+
+            <rect class="box" x="760" y="620" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="835" y="639" text-anchor="middle">LabReport</text>
+            <text class="erd-ns" x="835" y="655" text-anchor="middle">findings · file · release</text>
+
+            <!-- Billing boxes -->
+            <rect class="box" x="970" y="300" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="1045" y="319" text-anchor="middle">ServiceItem</text>
+            <text class="erd-ns" x="1045" y="335" text-anchor="middle">priced catalogue entry</text>
+
+            <rect class="box" x="970" y="440" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="1045" y="459" text-anchor="middle">Invoice</text>
+            <text class="erd-ns" x="1045" y="475" text-anchor="middle">snapshot lines · minor units</text>
+
+            <rect class="box" x="970" y="580" width="150" height="46" rx="8" />
+            <text class="erd-nt" x="1045" y="599" text-anchor="middle">Payment</text>
+            <text class="erd-ns" x="1045" y="615" text-anchor="middle">amount · method</text>
+
+            <!-- Edges: identity -->
+            <line class="edge" x1="210" y1="306" x2="326" y2="188" marker-end="url(#a3)" />
+            <text class="el" x="250" y="238">1 : 1</text>
+            <line class="edge" x1="210" y1="323" x2="326" y2="323" marker-end="url(#a3)" />
+            <text class="el" x="256" y="316">1 : 1</text>
+            <path class="edge" d="M 60,493 L 44,493 L 44,332 L 56,332" marker-end="url(#a3)" />
+            <path class="edge" d="M 60,583 L 34,583 L 34,318 L 56,318" marker-end="url(#a3)" />
+            <line class="edge-dash" x1="210" y1="410" x2="396" y2="348" marker-end="url(#a3)" />
+            <text class="el" x="300" y="368" text-anchor="middle">mints the MRN</text>
+
+            <!-- Edges: clinical -->
+            <line class="edge" x1="405" y1="116" x2="405" y2="156" marker-end="url(#a3)" />
+            <text class="el" x="413" y="141">N : 1</text>
+            <line class="edge" x1="480" y1="172" x2="616" y2="104" marker-end="url(#a3)" />
+            <text class="el" x="540" y="128">N : 1</text>
+            <line class="edge" x1="580" y1="262" x2="484" y2="198" marker-end="url(#a3)" />
+            <text class="el" x="536" y="218">N : 1</text>
+            <line class="edge" x1="580" y1="284" x2="484" y2="326" marker-end="url(#a3)" />
+            <text class="el" x="534" y="298">N : 1</text>
+            <line class="edge" x1="655" y1="250" x2="655" y2="120" marker-end="url(#a3)" />
+            <text class="el" x="663" y="180">N : 1</text>
+            <line class="edge" x1="655" y1="400" x2="655" y2="300" marker-end="url(#a3)" />
+            <text class="el" x="663" y="350">1 : 1</text>
+            <line class="edge" x1="580" y1="412" x2="474" y2="346" marker-end="url(#a3)" />
+            <text class="el" x="530" y="392">N : 1</text>
+            <line class="edge" x1="585" y1="400" x2="444" y2="210" marker-end="url(#a3)" />
+            <text class="el" x="496" y="296">N : 1</text>
+            <line class="edge" x1="475" y1="530" x2="618" y2="448" marker-end="url(#a3)" />
+            <text class="el" x="530" y="500">N : 1</text>
+            <line class="edge" x1="835" y1="530" x2="702" y2="448" marker-end="url(#a3)" />
+            <text class="el" x="778" y="500">N : 1</text>
+            <line class="edge" x1="835" y1="620" x2="835" y2="580" marker-end="url(#a3)" />
+            <text class="el" x="843" y="604">1 : 1</text>
+
+            <!-- Edges: billing -->
+            <line class="edge-dash" x1="1045" y1="440" x2="1045" y2="350" marker-end="url(#a3)" />
+            <text class="el" x="1053" y="388">lines snapshot</text>
+            <text class="el" x="1053" y="402">code · name · price</text>
+            <line class="edge" x1="1045" y1="580" x2="1045" y2="490" marker-end="url(#a3)" />
+            <text class="el" x="1053" y="538">N : 1</text>
+            <line class="edge-dash" x1="970" y1="452" x2="734" y2="428" marker-end="url(#a3)" />
+            <text class="el" x="850" y="428" text-anchor="middle">0..1 optional</text>
+            <path class="edge" d="M 970,470 L 455,470 L 455,350" marker-end="url(#a3)" />
+            <text class="el" x="760" y="462" text-anchor="middle">bills · N : 1</text>
+          </svg>
+          <figcaption>
+            Arrows point from the document holding the reference to the document it references.
+            <code>Notification</code>
+            and
+            <code>AuditLog</code>
+            both reference
+            <code>User</code>
+            ;
+            <code>Notice</code>
+            and
+            <code>RateLimit</code>
+            stand alone. Dashed connectors are indirect:
+            <code>Counter</code>
+            mints the medical record number the
+            <code>Patient</code>
+            carries, invoice lines copy the
+            <code>ServiceItem</code>
+            at issue time so a re-priced catalogue can never restate an old bill, and an invoice's link to an
+            <code>Encounter</code>
+            is optional — a standalone charge has none.
+            <code>LabReport</code>
+            stores its file in GridFS; only the storage key lives on the document, and no DTO ever exposes it.
+          </figcaption>
+        </figure>
+      </section>
+
+      <!-- 6 · The clinical workflow -->
+      <section class="card" id="workflow">
+        <h2>
+          <span class="kicker">Section 6</span>
+          The clinical workflow, end to end
+        </h2>
+        <p class="dim">
+          One patient's journey through the system, from first registration to a settled bill. Every stage is a state the records actually move
+          through — nothing here is decorative.
+        </p>
+        <figure class="fig-flow">
+          <svg
+            viewBox="0 0 1010 372"
+            role="img"
+            aria-label="Numbered pipeline of thirteen stages from patient registration through vitals, encounter, prescription, lab report and payment to a settled invoice.">
+            <defs>
+              <marker id="a4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--edge)" />
+              </marker>
+            </defs>
+
+            <!-- Row 1: steps 1-5 -->
+            <rect class="box" x="12" y="20" width="178" height="74" rx="10" />
+            <circle class="numc" cx="36" cy="42" r="11" />
+            <text class="numt" x="36" y="46" text-anchor="middle">1</text>
+            <text class="nt" x="54" y="46">Register</text>
+            <text class="ns" x="26" y="68">patient self-registration</text>
+
+            <rect class="box" x="214" y="20" width="178" height="74" rx="10" />
+            <circle class="numc" cx="238" cy="42" r="11" />
+            <text class="numt" x="238" y="46" text-anchor="middle">2</text>
+            <text class="nt" x="256" y="46">Verify email</text>
+            <text class="ns" x="228" y="68">hashed single-use token</text>
+
+            <rect class="box" x="416" y="20" width="178" height="74" rx="10" />
+            <circle class="numc" cx="440" cy="42" r="11" />
+            <text class="numt" x="440" y="46" text-anchor="middle">3</text>
+            <text class="nt" x="458" y="46">Admin approves</text>
+            <text class="ns" x="430" y="68">account may now sign in</text>
+
+            <rect class="box" x="618" y="20" width="178" height="74" rx="10" />
+            <circle class="numc" cx="642" cy="42" r="11" />
+            <text class="numt" x="642" y="46" text-anchor="middle">4</text>
+            <text class="nt" x="660" y="46">Book a slot</text>
+            <text class="ns" x="632" y="68">double-booking blocked</text>
+            <text class="ns" x="632" y="82">by a unique index</text>
+
+            <rect class="box" x="820" y="20" width="178" height="74" rx="10" />
+            <circle class="numc" cx="844" cy="42" r="11" />
+            <text class="numt" x="844" y="46" text-anchor="middle">5</text>
+            <text class="nt" x="862" y="46">Check in</text>
+            <text class="ns" x="834" y="68">queue token assigned</text>
+
+            <!-- Row 2: steps 6-9, right to left -->
+            <rect class="box" x="820" y="150" width="178" height="74" rx="10" />
+            <circle class="numc" cx="844" cy="172" r="11" />
+            <text class="numt" x="844" y="176" text-anchor="middle">6</text>
+            <text class="nt" x="862" y="176">Vitals + triage</text>
+            <text class="ns" x="834" y="198">nurse records vitals;</text>
+            <text class="ns" x="834" y="212">urgency reorders the queue</text>
+
+            <rect class="box" x="618" y="150" width="178" height="74" rx="10" />
+            <circle class="numc" cx="642" cy="172" r="11" />
+            <text class="numt" x="642" y="176" text-anchor="middle">7</text>
+            <text class="nt" x="660" y="176">Encounter opens</text>
+            <text class="ns" x="632" y="198">doctor · relationship-gated</text>
+
+            <rect class="box" x="416" y="150" width="178" height="74" rx="10" />
+            <circle class="numc" cx="440" cy="172" r="11" />
+            <text class="numt" x="440" y="176" text-anchor="middle">8</text>
+            <text class="nt" x="458" y="176">Diagnose + Rx</text>
+            <text class="ns" x="430" y="198">immutable prescription,</text>
+            <text class="ns" x="430" y="212">printable sheet</text>
+
+            <rect class="box" x="214" y="150" width="178" height="74" rx="10" />
+            <circle class="numc" cx="238" cy="172" r="11" />
+            <text class="numt" x="238" y="176" text-anchor="middle">9</text>
+            <text class="nt" x="256" y="176">Order lab test</text>
+            <text class="ns" x="228" y="198">tests · priority</text>
+
+            <!-- Row 3: steps 10-13 -->
+            <rect class="box" x="214" y="280" width="178" height="74" rx="10" />
+            <circle class="numc" cx="238" cy="302" r="11" />
+            <text class="numt" x="238" y="306" text-anchor="middle">10</text>
+            <text class="nt" x="256" y="306">Report released</text>
+            <text class="ns" x="228" y="328">patient notified — the result</text>
+            <text class="ns" x="228" y="342">stays in the portal</text>
+
+            <rect class="box" x="416" y="280" width="178" height="74" rx="10" />
+            <circle class="numc" cx="440" cy="302" r="11" />
+            <text class="numt" x="440" y="306" text-anchor="middle">11</text>
+            <text class="nt" x="458" y="306">Invoice raised</text>
+            <text class="ns" x="430" y="328">priced from the catalogue</text>
+
+            <rect class="box" x="618" y="280" width="178" height="74" rx="10" />
+            <circle class="numc" cx="642" cy="302" r="11" />
+            <text class="numt" x="642" y="306" text-anchor="middle">12</text>
+            <text class="nt" x="660" y="306">Payment taken</text>
+            <text class="ns" x="632" y="328">server-computed totals</text>
+
+            <rect class="box-hi" x="820" y="280" width="178" height="74" rx="10" />
+            <circle class="numc" cx="844" cy="302" r="11" />
+            <text class="numt" x="844" y="306" text-anchor="middle">13</text>
+            <text class="nt" x="862" y="306">Paid</text>
+            <text class="ns" x="834" y="328">balance settled — status</text>
+            <text class="ns" x="834" y="342">derived from payments</text>
+
+            <!-- Connectors -->
+            <line class="edge" x1="190" y1="57" x2="210" y2="57" marker-end="url(#a4)" />
+            <line class="edge" x1="392" y1="57" x2="412" y2="57" marker-end="url(#a4)" />
+            <line class="edge" x1="594" y1="57" x2="614" y2="57" marker-end="url(#a4)" />
+            <line class="edge" x1="796" y1="57" x2="816" y2="57" marker-end="url(#a4)" />
+            <line class="edge" x1="909" y1="94" x2="909" y2="146" marker-end="url(#a4)" />
+            <line class="edge" x1="820" y1="187" x2="800" y2="187" marker-end="url(#a4)" />
+            <line class="edge" x1="618" y1="187" x2="598" y2="187" marker-end="url(#a4)" />
+            <line class="edge" x1="416" y1="187" x2="396" y2="187" marker-end="url(#a4)" />
+            <line class="edge" x1="303" y1="224" x2="303" y2="276" marker-end="url(#a4)" />
+            <line class="edge" x1="392" y1="317" x2="412" y2="317" marker-end="url(#a4)" />
+            <line class="edge" x1="594" y1="317" x2="614" y2="317" marker-end="url(#a4)" />
+            <line class="edge" x1="796" y1="317" x2="816" y2="317" marker-end="url(#a4)" />
+          </svg>
+          <figcaption>
+            Vitals live on the appointment, not the encounter — a nurse records them at check-in, before the encounter exists. The release
+            notification names no result; the patient signs in to read it.
+          </figcaption>
+        </figure>
+        <div class="guarantees">
+          <div class="guarantee">
+            <strong>Access by relationship</strong>
+            A doctor reads only the patients they treat; wrong-owner access to a clinical record returns 404, not 403 — confirming a record exists is
+            itself a disclosure.
+          </div>
+          <div class="guarantee">
+            <strong>Every clinical read audited</strong>
+            An append-only AuditLog records who read which clinical record and when — the trail an administrator can see, distinct from the contents
+            they cannot.
+          </div>
+          <div class="guarantee">
+            <strong>Rate limits on public endpoints</strong>
+            Database-backed throttles on sign-in, registration and password reset, with sign-in failure counting behind them.
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 · Build progress -->
+      <section class="card" id="progress">
+        <h2>
+          <span class="kicker">Section 7</span>
+          Build progress
+        </h2>
+        <p class="dim">
+          The implementation plan runs in reviewable steps. Steps 0–21b are complete; 22–23 are in progress; 24 onward is scoped backlog.
+        </p>
+        <div class="table-scroll">
+          <table class="progress">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Step</th>
+                <th>Proposal phase</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>0</td>
+                <td>Project scaffold</td>
+                <td>Phase 1–2</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>1</td>
+                <td>Foundations</td>
+                <td>Phase 2</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>SEO, structured data, llms.txt</td>
+                <td>Phase 2</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>3a</td>
+                <td>Data model — identity &amp; directory</td>
+                <td>Phase 2–3</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>3b</td>
+                <td>Data model — clinical &amp; scheduling</td>
+                <td>Phase 2–3</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td>Authentication</td>
+                <td>Phase 3</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td>Dashboard shell &amp; RBAC</td>
+                <td>Phase 3</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>6</td>
+                <td>Admin — staff accounts</td>
+                <td>Phase 3</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>6b</td>
+                <td>Admin — departments &amp; service catalogue</td>
+                <td>Phase 3</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>7</td>
+                <td>Patient registry &amp; medical record no.</td>
+                <td>Phase 3</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>8</td>
+                <td>Doctor availability</td>
+                <td>Phase 3</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>9</td>
+                <td>Appointments &amp; queue management</td>
+                <td>Phase 3–4</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>10</td>
+                <td>Encounters &amp; medical records (EMR)</td>
+                <td>Phase 4</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>11</td>
+                <td>Digital prescriptions</td>
+                <td>Phase 4</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>12</td>
+                <td>Diagnostics — lab orders &amp; reports</td>
+                <td>Phase 4</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>13</td>
+                <td>Patient portal</td>
+                <td>Phase 4</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>14</td>
+                <td>Nurse workspace — triage &amp; vitals</td>
+                <td>Phase 4</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>15</td>
+                <td>Accounts — registration &amp; email</td>
+                <td>Phase 5</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>16</td>
+                <td>Profiles</td>
+                <td>Phase 5</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>17</td>
+                <td>Notices &amp; announcements</td>
+                <td>Phase 5</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>18</td>
+                <td>Notifications, reminders &amp; alerts</td>
+                <td>Phase 5</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>19</td>
+                <td>Billing &amp; payments</td>
+                <td>Phase 5</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>20</td>
+                <td>Analytics &amp; reporting</td>
+                <td>Phase 5</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>21a</td>
+                <td>Hardening</td>
+                <td>Phase 6</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>21b</td>
+                <td>Polish</td>
+                <td>Phase 6</td>
+                <td><span class="badge done">Done</span></td>
+              </tr>
+              <tr>
+                <td>22</td>
+                <td>Testing &amp; deployment</td>
+                <td>Phase 6–7</td>
+                <td><span class="badge prog">In progress</span></td>
+              </tr>
+              <tr>
+                <td>23</td>
+                <td>Documentation &amp; handover — this document</td>
+                <td>Phase 8</td>
+                <td><span class="badge prog">In progress</span></td>
+              </tr>
+              <tr>
+                <td>24</td>
+                <td>Inpatient admissions &amp; beds</td>
+                <td>—</td>
+                <td><span class="badge back">Backlog</span></td>
+              </tr>
+              <tr>
+                <td>25</td>
+                <td>Teleconsultation &amp; referrals</td>
+                <td>—</td>
+                <td><span class="badge back">Backlog</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="dim small" style="margin-top: 1rem">
+          Further scoped backlog beyond the numbered steps: ICD-10 diagnosis coding, a drug database with interaction checking, pediatric vitals
+          reference ranges, patient-reported allergies and conditions, an online payment gateway, and real SMS delivery — each deferred deliberately,
+          with the reason recorded in the plan.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Generated as project documentation (step 23) of the Unified Healthcare Management Solution. This file is fully self-contained — no scripts, no
+        external assets, no network access needed — and every claim above reflects the code as built through steps 0–21b. Sources:
+        <code>README.md</code>
+        ,
+        <code>docs/IMPLEMENTATION-PLAN.md</code>
+        and the eighteen models in
+        <code>models/</code>
+        .
+      </p>
+    </footer>
+  </body>
+</html>
