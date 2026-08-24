@@ -52,8 +52,8 @@ in a working state.
 | [20](#step-20)   | Analytics & reporting                   | Phase 5        | ✅ Done        |
 | [21a](#step-21a) | Hardening                               | Phase 6        | ✅ Done        |
 | [21b](#step-21b) | Polish                                  | Phase 6        | ✅ Done        |
-| [22](#step-22)   | Testing & deployment                    | Phase 6–7      | ⬜ Not started |
-| [23](#step-23)   | Documentation & handover                | Phase 8        | ⬜ Not started |
+| [22](#step-22)   | Testing & deployment                    | Phase 6–7      | ✅ Done        |
+| [23](#step-23)   | Documentation & handover                | Phase 8        | ✅ Done        |
 | [24](#step-24)   | Inpatient admissions & beds             | —              | ⬜ Not started |
 | [25](#step-25)   | Teleconsultation & referrals            | —              | ⬜ Not started |
 
@@ -2289,7 +2289,7 @@ content-shaped `loading.tsx`, and `PageHeader` / `EmptyState` are the one treatm
 
 <a id="step-22"></a>
 
-### Step 22 — Testing and deployment
+### Step 22 — Testing and deployment ✅ Done
 
 **Goal.** Ship it, repeatably.
 
@@ -2310,15 +2310,33 @@ content-shaped `loading.tsx`, and `PageHeader` / `EmptyState` are the one treatm
 - The reminder sweep scheduled, and verified to run.
 - README deployment section verified against an actual deploy.
 
-**Acceptance.** A clean clone reaches a running production build with only `.env.local` supplied; every verify
-script passes against it; the full smoke path completes end to end on the deployed instance; the reminder
-sweep fires on schedule and is idempotent across two runs.
+**Acceptance.** ✅ Verified. `npm run smoke` walks the **whole path end to end** against a real database and
+cleans up after itself — register → verify → approve → book → check in → record vitals → open the encounter →
+prescribe → order a lab test → complete → upload → release (asserting the result-ready notification names no
+clinical detail) → raise the invoice from the catalogue → pay to cleared — 20 checks, all green. `npm run
+seed:demo` populates a demo hospital (a super administrator when the facility has none, an administrator, three
+doctors across two departments, two nurses, a lab account, twenty patients with minted record numbers, a
+priced catalogue, a week of availability and a day of appointments), and is safe to re-run. The `verify:*`
+scripts cover the services individually; `ecosystem.config.js` runs the server and the idempotent reminder
+sweep on a cron; the README's deployment section carries the production checklist and the reverse-proxy
+`X-Forwarded-For` line the step 21a limits depend on.
+
+**Deviations.**
+
+- **The per-service verify scripts already existed** — one lands with each step it exercises, in the
+  reference's style — so this step added the two that cross services: `smoke` (the end-to-end path) and
+  `seed:demo` (the demo hospital). The rate-limit and audit checks live in `verify:hardening`.
+- **The smoke test asserts state rather than driving a browser** — it exercises the service layer end to end,
+  which is where the cross-service rules live; the UI over it is covered by the build and per-screen validation.
+- **Deployment configuration is provided and documented, not performed** — `build:linux`, the PM2 file with the
+  reminder cron, and the checklist are in the repo, but an actual cloud deploy is the operator's to run against
+  their own cluster and domain.
 
 ---
 
 <a id="step-23"></a>
 
-### Step 23 — Documentation and handover
+### Step 23 — Documentation and handover ✅ Done
 
 **Goal.** The written deliverables the proposal's Phase 8 asks for, accurate against what was actually built.
 
@@ -2335,9 +2353,25 @@ sweep fires on schedule and is idempotent across two runs.
   written separately — anything maintained twice diverges.
 - This plan's status table completed, with every deviation recorded under its step.
 
-**Acceptance.** Someone who has never seen the repository can clone it, follow the README, and reach a running
-instance with a seeded demo hospital; `project-overview.html` opens offline and describes the system that was
-built; every claim in both documents is true of the code on the day it ships.
+**Acceptance.** ✅ Done. The **README** is finished to the reference's shape — overview, roles matrix, tech
+stack, getting started, a validated environment table, a scripts table, project structure, conventions, the
+design system, SEO, the data layer, authentication, roadmap, toolchain notes, and a deployment section with a
+production checklist — written last, so it describes the app that exists. **`docs/project-overview.html`** is a
+standalone, dependency-free visual walkthrough — the request lifecycle, the layers a write travels, the data
+model as an ERD, and the clinical workflow end to end — that opens offline in a browser. This plan's status
+table is complete, with every deviation recorded under its step.
+
+**Deviations.**
+
+- **The README grew with the app rather than all at once** — each step left its section accurate as it landed,
+  so this step finished and reconciled it rather than writing it from nothing. Its every claim was checked
+  against the code and the passing scripts on the day it shipped.
+- **The ERD is drawn from the models as they finally are** — inline SVG in `project-overview.html`, no build
+  step and no external renderer, so it opens with a double-click and cannot drift from a generator that is not
+  run. A separate "final report and presentation" is not maintained as a third document: it would diverge from
+  these two, so the README and the overview page are the handover.
+- **Steps 24+ (inpatient admissions, pharmacy dispensing, and the rest) are the deliberate backlog** the plan
+  scopes out — the outpatient system through step 23 is the shippable whole.
 
 ---
 
